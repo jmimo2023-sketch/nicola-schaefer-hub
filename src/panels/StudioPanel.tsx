@@ -16,12 +16,24 @@ import {
   RefreshCw,
   X,
   Film,
-  Layers
+  Layers,
+  Check,
+  Sparkles,
+  FileVideo
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import { useFirebase } from '../lib/FirebaseProvider';
-import { initCanva, createDesignWithMedia } from '../services/canvaService';
+import {
+  initCanva,
+  createDesignWithMedia,
+  createBrandedDesign,
+  isCanvaAvailable,
+  BRAND_CONFIG,
+  DesignType,
+  getDesignTypes,
+  PublishedDesign
+} from '../services/canvaService';
 import {
   uploadAsset,
   listAssets,
@@ -46,6 +58,9 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [supabaseReady, setSupabaseReady] = useState(false);
+  const [selectedDesignType, setSelectedDesignType] = useState<DesignType>('instagram_post');
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [showDesignModal, setShowDesignModal] = useState(false);
 
   // Initialize Canva
   useEffect(() => {
@@ -131,10 +146,37 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
     disabled: isUploading || !supabaseReady,
   });
 
-  // Handle edit with Canva
+  // Open Canva editor with design type selector
   const handleEdit = async (asset: Asset) => {
+    setEditingAsset(asset);
+    setShowDesignModal(true);
+  };
+
+  // Start editing with selected design type
+  const startEditing = async (designType: DesignType) => {
+    if (!editingAsset) return;
+
+    setShowDesignModal(false);
+
     try {
-      await createDesignWithMedia(asset.publicUrl);
+      if (!isCanvaAvailable()) {
+        toast.error('Canva not available. Check API key configuration.');
+        return;
+      }
+
+      await createDesignWithMedia(
+        editingAsset.publicUrl,
+        designType,
+        {
+          title: `Edit - ${editingAsset.name}`,
+          onPublish: (design: PublishedDesign) => {
+            toast.success('Design published in Canva!', {
+              description: `Export URL: ${design.exportUrl}`,
+              duration: 5000,
+            });
+          }
+        }
+      );
     } catch (err) {
       console.error('Canva error:', err);
       toast.error('Failed to open Canva editor');
@@ -316,15 +358,13 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
 
                 {/* Hover Overlay */}
                 <div className="absolute inset-0 bg-accent/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-sm">
-                  {!isVideo(asset.mimeType) && (
-                    <button
-                      onClick={() => handleEdit(asset)}
-                      className="p-3 bg-white text-accent rounded-full hover:scale-110 transition-transform shadow-xl"
-                      title="Edit with Canva"
-                    >
-                      <Palette size={20} />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleEdit(asset)}
+                    className="p-3 bg-white text-accent rounded-full hover:scale-110 transition-transform shadow-xl"
+                    title="Edit with Canva"
+                  >
+                    {isVideo(asset.mimeType) ? <FileVideo size={20} /> : <Palette size={20} />}
+                  </button>
                   <button
                     onClick={() => handleDelete(asset)}
                     className="p-3 bg-white text-rose-500 rounded-full hover:scale-110 transition-transform shadow-xl"
@@ -346,6 +386,111 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Design Type Selection Modal */}
+      {showDesignModal && editingAsset && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-brd rounded-2xl shadow-2xl max-w-lg w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-ink">Create Design</h3>
+                  <p className="text-xs text-ink-muted">Select format for {editingAsset.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDesignModal(false)}
+                className="p-2 hover:bg-brd rounded-lg transition-colors"
+              >
+                <X size={20} className="text-ink-muted" />
+              </button>
+            </div>
+
+            {/* Design Type Grid */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {getDesignTypes()
+                .filter(dt => ['instagram_post', 'instagram_story', 'instagram_reel', 'youtube_thumbnail', 'youtube_shorts'].includes(dt.id))
+                .map((dt) => (
+                  <button
+                    key={dt.id}
+                    onClick={() => startEditing(dt.id)}
+                    className={cn(
+                      "p-4 rounded-xl border text-left transition-all",
+                      selectedDesignType === dt.id
+                        ? "border-accent bg-accent/5"
+                        : "border-brd hover:border-accent"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {dt.id.includes('story') || dt.id.includes('reel') ? (
+                        <Video size={14} className="text-accent" />
+                      ) : dt.id.includes('youtube') ? (
+                        <Film size={14} className="text-accent" />
+                      ) : (
+                        <ImageIcon size={14} className="text-accent" />
+                      )}
+                      <span className="text-xs font-bold text-ink">{dt.label}</span>
+                    </div>
+                    <p className="text-[10px] text-ink-muted">
+                      {dt.id === 'instagram_post' && '1080 × 1080'}
+                      {dt.id === 'instagram_story' && '1080 × 1920'}
+                      {dt.id === 'instagram_reel' && '1080 × 1920'}
+                      {dt.id === 'youtube_thumbnail' && '1280 × 720'}
+                      {dt.id === 'youtube_shorts' && '1080 × 1920'}
+                    </p>
+                  </button>
+                ))}
+            </div>
+
+            {/* Brand Colors */}
+            <div className="border-t border-brd pt-4">
+              <p className="text-xs font-bold text-ink-muted mb-3">BRAND COLORS</p>
+              <div className="flex gap-2">
+                <div
+                  className="w-8 h-8 rounded-lg border border-brd"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
+                  title="Primary Green"
+                />
+                <div
+                  className="w-8 h-8 rounded-lg border border-brd"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.secondary }}
+                  title="Secondary Orange"
+                />
+                <div
+                  className="w-8 h-8 rounded-lg border border-brd"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.background }}
+                  title="Background"
+                />
+                <div
+                  className="w-8 h-8 rounded-lg border border-brd"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.text }}
+                  title="Text"
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowDesignModal(false)}
+                className="flex-1 px-4 py-3 border border-brd rounded-xl text-sm font-bold text-ink-muted hover:bg-brd transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => startEditing(selectedDesignType)}
+                className="flex-1 px-4 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2"
+              >
+                <Palette size={16} />
+                Open in Canva
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
