@@ -70,14 +70,14 @@ export async function uploadAsset(
     throw new Error(`Upload failed: ${error.message}`);
   }
 
-  // Get public URL
-  const { data: urlData } = client.storage.from(bucket).getPublicUrl(fileName);
+  // Build public URL directly
+  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${fileName}`;
 
   return {
     id: data.id || fileName,
     name: file.name,
-    url: urlData.publicUrl,
-    publicUrl: urlData.publicUrl,
+    url: publicUrl,
+    publicUrl,
     mimeType: file.type,
     size: file.size,
     bucket,
@@ -105,15 +105,16 @@ export async function listAssets(
     throw new Error(`List failed: ${error.message}`);
   }
 
-  const { data: urlData } = client.storage.from(bucket).getPublicUrl('');
+  // Get the public URL base
+  const publicUrlBase = `${SUPABASE_URL}/storage/v1/object/public/${bucket}`;
 
   return (data || [])
     .filter(file => file.id && !file.name.startsWith('.'))
     .map(file => ({
       id: file.id,
       name: file.name,
-      url: `${urlData.publicUrl}${folder}/${file.name}`,
-      publicUrl: `${urlData.publicUrl}${folder}/${file.name}`,
+      url: `${publicUrlBase}/${folder}/${file.name}`,
+      publicUrl: `${publicUrlBase}/${folder}/${file.name}`,
       mimeType: file.metadata?.mimetype || 'application/octet-stream',
       size: file.metadata?.size || 0,
       folder,
