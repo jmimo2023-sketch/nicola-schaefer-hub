@@ -31,7 +31,8 @@ import {
   Image as ImageIcon,
   HardDrive,
   Trash2,
-  Upload
+  Upload,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -73,6 +74,7 @@ import {
 import { initGoogleLibraries, openAssetPicker } from './services/googleAssetsService';
 import { initCanva, createDesignWithMedia } from './services/canvaService';
 import { StudioPanel } from './panels/StudioPanel';
+import { ConnectionsPanel } from './panels/ConnectionsPanel';
 
 export default function App() {
   const { user, loading } = useFirebase();
@@ -188,6 +190,9 @@ function MainApp() {
           <NavItem active={activeTab === 'methodology'} onClick={() => setActiveTab('methodology')} icon={<LayoutGrid size={18} />} label="Methodology" />
           <NavItem active={activeTab === 'dach'} onClick={() => setActiveTab('dach')} icon={<Globe size={18} />} label={t('dach')} />
           <NavItem active={activeTab === 'materialization'} onClick={() => setActiveTab('materialization')} icon={<Workflow size={18} />} label={t('materialization')} />
+
+          <div className="px-4 py-3 mt-4 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">System</div>
+          <NavItem active={activeTab === 'connections'} onClick={() => setActiveTab('connections')} icon={<Settings size={18} />} label="Connections" />
         </nav>
 
         <div className="p-4 bg-transparent mt-auto">
@@ -287,6 +292,7 @@ function MainApp() {
               {activeTab === 'methodology' && <MethodologyPanel />}
               {activeTab === 'dach' && <DACHPanel />}
               {activeTab === 'materialization' && <MaterializationPanel />}
+              {activeTab === 'connections' && <ConnectionsPanel />}
             </motion.div>
           </AnimatePresence>
         </div>
