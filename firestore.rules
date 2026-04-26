@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(authorId) {
+      return isSignedIn() && request.auth.uid == authorId;
+    }
+
+    function isAdmin() {
+      // In a real prod environment, use: exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      // For bootstrapping purposes, we use the provided email
+      return isSignedIn() && request.auth.token.email == 'jmimo2023@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+    function isValidPost(data) {
+      return data.authorId == request.auth.uid 
+        && data.content is string && data.content.size() <= 10000
+        && data.type is string && data.type.size() <= 100
+        && data.date is string && data.date.size() <= 20
+        && data.status in ['ready', 'draft', 'published']
+        && data.authorId.size() <= 128;
+    }
+
+    function isValidAsset(data) {
+      return data.authorId == request.auth.uid
+        && data.name is string && data.name.size() <= 500
+        && data.url is string && data.url.size() <= 2000
+        && (data.mimeType == null || (data.mimeType is string && data.mimeType.size() <= 100));
+    }
+
+    function isValidMethodology(data) {
+      return data.authorId == request.auth.uid
+        && data.title is string && data.title.size() <= 200
+        && data.content is string && data.content.size() <= 20000
+        && data.type is string && data.type.size() <= 50;
+    }
+
+    // --- Collections ---
+
+    match /posts/{postId} {
+      allow get: if isOwner(existing().authorId) && isValidId(postId);
+      allow list: if isSignedIn() && existing().authorId == request.auth.uid;
+      
+      allow create: if (
+        isSignedIn() && 
+        isValidId(postId) &&
+        isValidPost(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        incoming().keys().hasAll(['authorId', 'content', 'type', 'date', 'status', 'createdAt', 'updatedAt'])
+      );
+
+      allow update: if (
+        isOwner(existing().authorId) &&
+        isValidPost(incoming()) &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) ||
+           incoming().diff(existing()).affectedKeys().hasOnly(['date', 'content', 'status', 'updatedAt'])
+        )
+      );
+
+      allow delete: if isOwner(existing().authorId);
+    }
+
+    match /assets/{assetId} {
+      allow list: if isSignedIn() && existing().authorId == request.auth.uid;
+      allow get: if isOwner(existing().authorId) && isValidId(assetId);
+      
+      allow create: if (
+        isSignedIn() && 
+        isValidId(assetId) &&
+        isValidAsset(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().keys().hasAll(['authorId', 'name', 'url', 'createdAt'])
+      );
+
+      allow delete: if isOwner(existing().authorId);
+    }
+
+    match /methodology/{insightId} {
+      allow list: if isSignedIn() && existing().authorId == request.auth.uid;
+      allow get: if isOwner(existing().authorId) && isValidId(insightId);
+
+      allow create: if (
+        isSignedIn() &&
+        isValidId(insightId) &&
+        isValidMethodology(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().keys().hasAll(['authorId', 'title', 'content', 'type', 'createdAt'])
+      );
+
+      allow update: if (
+         isOwner(existing().authorId) &&
+         isValidMethodology(incoming()) &&
+         incoming().authorId == existing().authorId &&
+         incoming().createdAt == existing().createdAt &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content'])
+      );
+
+      allow delete: if isOwner(existing().authorId);
+    }
+
+    match /analytics/{docId} {
+      allow get: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

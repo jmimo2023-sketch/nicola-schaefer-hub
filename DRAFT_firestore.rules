@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global catch-all deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(authorId) {
+      return isSignedIn() && request.auth.uid == authorId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'jmimo2023@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Blueprints
+    function isValidPost(data) {
+      return data.authorId == request.auth.uid 
+        && data.date is string && data.date.size() <= 20
+        && data.type is string && data.type.size() <= 50
+        && data.content is string && data.content.size() <= 5000
+        && data.status in ['draft', 'ready']
+        && isValidId(data.authorId);
+    }
+
+    // Collection: Posts
+    match /posts/{postId} {
+      allow get: if isOwner(existing().authorId) && isValidId(postId);
+      allow list: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      
+      allow create: if (
+        isSignedIn() && 
+        isValidId(postId) &&
+        isValidPost(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        incoming().keys().hasAll(['date', 'type', 'content', 'status', 'authorId', 'createdAt', 'updatedAt']) &&
+        incoming().keys().size() == 7
+      );
+
+      allow update: if (
+        isOwner(existing().authorId) &&
+        isValidPost(incoming()) &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Action: Content Edit
+          (incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt'])) ||
+          // Action: Status Update
+          (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+          // Action: Full Edit
+          (incoming().diff(existing()).affectedKeys().hasOnly(['date', 'type', 'content', 'status', 'updatedAt']))
+        )
+      );
+
+      allow delete: if isOwner(existing().authorId);
+    }
+
+    // Collection: Analytics
+    match /analytics/summary {
+      allow get: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

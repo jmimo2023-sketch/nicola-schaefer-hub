@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cormorant Garamond", serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #f4f3f3; /* Light gray from palette */
+  --color-ink-muted: #9A9590;
+  --color-paper: #000000; /* Black from palette */
+  --color-card: #0a0a0a; /* Deep black-green for cards */
+  --color-brd: #1a1a1a; 
+  
+  --color-accent: #467a49; /* Green from palette */
+  --color-accent-light: rgba(70, 122, 73, 0.1);
+  --color-green-custom: #467a49; 
+  --color-green-light: rgba(70, 122, 73, 0.1);
+  --color-rose-custom: #d16806; /* Orange from palette */
+  --color-rose-light: rgba(209, 104, 6, 0.1);
+  --color-amber-custom: #e8b571; /* Gold from palette */
+  --color-amber-light: rgba(232, 181, 113, 0.1);
+  
+  --radius-custom: 2rem;
+  --shadow-custom: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-sans transition-colors duration-300;
+  }
+}
+
+/* Theme overrides (Bento is dark-first/native) */
+:root[data-theme='light'] {
+  --color-ink: #09090b;
+  --color-ink-muted: #71717a;
+  --color-paper: #fafafa;
+  --color-card: #ffffff;
+  --color-brd: #e4e4e7;
+}
+
+.markdown-body h1 { @apply font-display text-3xl font-semibold mb-4; }
+.markdown-body h2 { @apply font-display text-2xl font-semibold mb-3; }
+.markdown-body p { @apply mb-4 leading-relaxed; }
+.markdown-body ul { @apply list-disc pl-5 mb-4; }
+.markdown-body li { @apply mb-2; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.1);
+  border-radius: 3px;
+}
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+}

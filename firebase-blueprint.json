@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "Post": {
+      "title": "Post",
+      "description": "A scheduled content piece (reel script, caption, etc.)",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string", "description": "UID of the user who owns this post" },
+        "content": { "type": "string", "description": "The title or summary of the content" },
+        "type": { "type": "string", "description": "Type of content: reel_script, caption, story, dm" },
+        "date": { "type": "string", "description": "Scheduled date in YYYY-MM-DD format" },
+        "status": { "type": "string", "enum": ["ready", "draft", "published"], "description": "Workflow status" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "content", "type", "date", "status"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "description": "Media asset imported from Google Drive or Photos",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "source": { "type": "string" },
+        "mimeType": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "name", "url"]
+    },
+    "Methodology": {
+      "title": "Methodology",
+      "description": "AI-generated insight or strategic methodology",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string" },
+        "pillar": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "title", "content"]
+    },
+    "AnalyticsSummary": {
+      "title": "AnalyticsSummary",
+      "description": "Aggregated analytics data for the dashboard",
+      "type": "object",
+      "properties": {
+        "total_views": { "type": "number" },
+        "avg_er": { "type": "number" },
+        "total_follows": { "type": "number" },
+        "total_saves": { "type": "number" },
+        "total_stories": { "type": "number" },
+        "story_retention": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Collection of scheduled social media posts"
+    },
+    "/assets/{assetId}": {
+      "schema": "Asset",
+      "description": "Collection of imported media files"
+    },
+    "/methodology/{insightId}": {
+      "schema": "Methodology",
+      "description": "Collection of saved strategic insights"
+    },
+    "/analytics/summary": {
+      "schema": "AnalyticsSummary",
+      "description": "Global analytics summary document"
+    }
+  }
+}
