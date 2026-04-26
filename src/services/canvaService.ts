@@ -281,3 +281,103 @@ export const EXPORT_FORMATS = {
 } as const;
 
 export type ExportFormat = typeof EXPORT_FORMATS.image[number] | typeof EXPORT_FORMATS.video[number];
+
+/**
+ * Search for stock images in Canva
+ * Returns an array of image URLs that can be used in designs
+ */
+export async function searchCanvaStockImages(query: string): Promise<string[]> {
+  await initCanva();
+
+  if (!canvaApi) {
+    throw new Error('Canva not initialized');
+  }
+
+  // Canva's Design Button SDK supports stock image search
+  // Note: This feature may require specific Canva API permissions
+  try {
+    // This would use Canva's stock API if available
+    // For now, return empty - actual implementation depends on Canva API capabilities
+    console.warn('Canva stock search requires additional API configuration');
+    return [];
+  } catch (err) {
+    console.error('Canva stock search error:', err);
+    return [];
+  }
+}
+
+/**
+ * Open Canva's built-in image picker
+ * Allows user to select images from Canva's library
+ * Returns the selected image URL
+ */
+export async function openCanvaImagePicker(): Promise<string | null> {
+  await initCanva();
+
+  if (!canvaApi) {
+    throw new Error('Canva not initialized');
+  }
+
+  return new Promise((resolve) => {
+    // Canva Design Button supports image picker
+    // The user can select from their Canva library or stock images
+    if (canvaApi.createDesign) {
+      // Open a minimal design to access Canva's image picker
+      canvaApi.createDesign({
+        designType: 'instagram_post',
+        onDesignPublish: (exportUrl: string) => {
+          // User cancelled or selected
+          resolve(exportUrl || null);
+        },
+        onDesignClose: () => {
+          resolve(null);
+        },
+      }).catch(() => {
+        resolve(null);
+      });
+    } else {
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * Create design with Canva image picker integration
+ * Opens Canva with ability to browse and select images
+ */
+export async function createDesignWithCanvaAssets(
+  type: DesignType,
+  options?: {
+    title?: string;
+    onPublish?: (design: PublishedDesign) => void;
+  }
+): Promise<void> {
+  await initCanva();
+
+  if (!canvaApi) {
+    throw new Error('Canva not initialized');
+  }
+
+  return new Promise((resolve, reject) => {
+    canvaApi
+      .createDesign({
+        designType: type,
+        title: options?.title || `Design - ${type}`,
+        // This opens Canva with the ability to add images from Canva library
+        onDesignPublish: (exportUrl: string, exportWidth: number, exportHeight: number) => {
+          if (options?.onPublish) {
+            options.onPublish({
+              exportUrl,
+              designId: 'canva-asset',
+              designTitle: options.title || type,
+              exportWidth,
+              exportHeight,
+            });
+          }
+          resolve();
+        },
+      })
+      .then(() => resolve())
+      .catch(reject);
+  });
+}

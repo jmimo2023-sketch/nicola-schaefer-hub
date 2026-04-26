@@ -1,7 +1,8 @@
 /**
- * Content Studio Panel v2
+ * Content Studio Panel v2.1
  * Uses Supabase Storage for assets (no Google dependencies)
  * Supports images and videos with drag-and-drop upload
+ * Integrated with Canva for design editing
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -19,7 +20,10 @@ import {
   Layers,
   Check,
   Sparkles,
-  FileVideo
+  FileVideo,
+  Plus,
+  Wand2,
+  ImagePlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -27,6 +31,7 @@ import { useFirebase } from '../lib/FirebaseProvider';
 import {
   initCanva,
   createDesignWithMedia,
+  createDesignWithCanvaAssets,
   createBrandedDesign,
   isCanvaAvailable,
   BRAND_CONFIG,
@@ -58,13 +63,24 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [supabaseReady, setSupabaseReady] = useState(false);
-  const [selectedDesignType, setSelectedDesignType] = useState<DesignType>('instagram_post');
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDesignModal, setShowDesignModal] = useState(false);
+  const [selectedDesignType, setSelectedDesignType] = useState<DesignType>('instagram_post');
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [canvaReady, setCanvaReady] = useState(false);
 
   // Initialize Canva
   useEffect(() => {
-    initCanva().catch(console.error);
+    const init = async () => {
+      try {
+        await initCanva();
+        setCanvaReady(isCanvaAvailable());
+      } catch (err) {
+        console.error('Canva init error:', err);
+        setCanvaReady(false);
+      }
+    };
+    init();
   }, []);
 
   // Check Supabase configuration
@@ -146,32 +162,36 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
     disabled: isUploading || !supabaseReady,
   });
 
-  // Open Canva editor with design type selector
+  // Open design type selector
   const handleEdit = async (asset: Asset) => {
-    setEditingAsset(asset);
+    setSelectedAsset(asset);
     setShowDesignModal(true);
   };
 
-  // Start editing with selected design type
-  const startEditing = async (designType: DesignType) => {
-    if (!editingAsset) return;
+  // Start creating a new design directly in Canva
+  const handleCreateNew = () => {
+    setShowCreateModal(true);
+  };
 
+  // Start editing with selected design type
+  const startEditing = async (designType: DesignType, assetUrl?: string) => {
     setShowDesignModal(false);
+    setShowCreateModal(false);
+
+    if (!canvaReady) {
+      toast.error('Canva not available. Check API key configuration.');
+      return;
+    }
 
     try {
-      if (!isCanvaAvailable()) {
-        toast.error('Canva not available. Check API key configuration.');
-        return;
-      }
-
       await createDesignWithMedia(
-        editingAsset.publicUrl,
+        assetUrl || '',
         designType,
         {
-          title: `Edit - ${editingAsset.name}`,
+          title: assetUrl ? `Edit - ${designType}` : `New - ${designType}`,
           onPublish: (design: PublishedDesign) => {
-            toast.success('Design published in Canva!', {
-              description: `Export URL: ${design.exportUrl}`,
+            toast.success('Design published!', {
+              description: 'Your design has been saved to Canva.',
               duration: 5000,
             });
           }
@@ -183,12 +203,37 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
     }
   };
 
+  // Open Canva with built-in image picker (browse Canva library)
+  const handleBrowseCanvaAssets = async (designType: DesignType) => {
+    setShowDesignModal(false);
+    setShowCreateModal(false);
+
+    if (!canvaReady) {
+      toast.error('Canva not available. Check API key configuration.');
+      return;
+    }
+
+    try {
+      await createDesignWithCanvaAssets(designType, {
+        title: `Design from Canva - ${designType}`,
+        onPublish: (design: PublishedDesign) => {
+          toast.success('Design created from Canva assets!', {
+            description: 'Your design has been exported.',
+            duration: 5000,
+          });
+        },
+      });
+    } catch (err) {
+      console.error('Canva error:', err);
+      toast.error('Failed to open Canva');
+    }
+  };
+
   // Handle delete
   const handleDelete = async (asset: Asset) => {
     if (!confirm(`Delete "${asset.name}"?`)) return;
 
     try {
-      // Extract filename from path
       const fileName = asset.name.split('/').pop() || asset.name;
       await deleteAsset(asset.folder, fileName);
       toast.success('Asset deleted');
@@ -201,31 +246,50 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
   // Check if file is video
   const isVideo = (mimeType: string) => mimeType.startsWith('video/');
 
+  const designTypes = getDesignTypes().filter(dt =>
+    ['instagram_post', 'instagram_story', 'instagram_reel', 'youtube_thumbnail', 'youtube_shorts', 'facebook_post', 'linkedin_post'].includes(dt.id)
+  );
+
   return (
     <div className="max-w-7xl mx-auto space-y-10 pb-20">
       {/* Header */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div className="text-center md:text-left">
           <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent mb-4 font-mono">
-            CONTENT_STUDIO_V2.0
+            CONTENT_STUDIO_V2.1
           </div>
           <h2 className="font-display text-5xl font-semibold mb-4 leading-tight tracking-tight">
             Content Studio
           </h2>
           <p className="text-sm text-ink-muted max-w-xl font-medium leading-relaxed font-sans">
-            Upload images and videos from your computer. Edit with Canva. All stored in Supabase.
+            Upload assets or create directly in Canva. Edit images and videos.
           </p>
         </div>
 
-        {/* Status */}
+        {/* Actions */}
         <div className="flex flex-col items-center md:items-end gap-2">
-          <div className={cn(
-            "text-[9px] font-mono font-bold uppercase tracking-widest px-3 py-1 rounded-full border",
-            supabaseReady
-              ? "text-green-custom bg-green-light border-green-custom/20"
-              : "text-rose-500 bg-rose-50 border-rose-100"
-          )}>
-            {supabaseReady ? 'SUPABASE_READY' : 'SUPABASE_NOT_CONFIGURED'}
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreateNew}
+              disabled={!canvaReady}
+              className={cn(
+                "px-6 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all flex items-center gap-2",
+                canvaReady
+                  ? "bg-accent text-white shadow-lg shadow-accent/20 hover:bg-accent/90"
+                  : "bg-brd text-ink-muted cursor-not-allowed"
+              )}
+            >
+              <Wand2 size={16} />
+              Create in Canva
+            </button>
+            <div className={cn(
+              "text-[9px] font-mono font-bold uppercase tracking-widest px-3 py-1 rounded-full border",
+              supabaseReady
+                ? "text-green-custom bg-green-light border-green-custom/20"
+                : "text-rose-500 bg-rose-50 border-rose-100"
+            )}>
+              {supabaseReady ? 'SUPABASE_READY' : 'STORAGE_OFF'}
+            </div>
           </div>
         </div>
       </header>
@@ -300,6 +364,32 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
         </div>
       </div>
 
+      {/* Canva Assets Button */}
+      <div className="flex items-center gap-4 p-6 bg-accent/5 border border-accent/20 rounded-2xl">
+        <div className="flex-1">
+          <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+            <Sparkles size={16} className="text-accent" />
+            Create with Canva
+          </h4>
+          <p className="text-xs text-ink-muted mt-1">
+            Browse thousands of images, templates, and graphics from Canva's library
+          </p>
+        </div>
+        <button
+          onClick={() => handleBrowseCanvaAssets('instagram_post')}
+          disabled={!canvaReady}
+          className={cn(
+            "px-6 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all flex items-center gap-2",
+            canvaReady
+              ? "bg-accent text-white hover:bg-accent/90 shadow-lg"
+              : "bg-brd text-ink-muted cursor-not-allowed"
+          )}
+        >
+          <ImagePlus size={16} />
+          Browse Canva Library
+        </button>
+      </div>
+
       {/* Filter */}
       <div className="flex gap-2">
         {(['all', 'images', 'videos'] as FilterType[]).map((f) => (
@@ -329,7 +419,7 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
           <p className="font-mono text-[10px] font-bold uppercase tracking-widest">
             No {filter === 'all' ? folder : filter} yet
           </p>
-          <p className="text-xs">Upload something to get started</p>
+          <p className="text-xs">Upload something or create directly in Canva</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -389,8 +479,8 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
         </div>
       )}
 
-      {/* Design Type Selection Modal */}
-      {showDesignModal && editingAsset && (
+      {/* Create New Design Modal */}
+      {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-card border border-brd rounded-2xl shadow-2xl max-w-lg w-full p-8">
             <div className="flex items-center justify-between mb-6">
@@ -399,8 +489,93 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
                   <Sparkles className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-ink">Create Design</h3>
-                  <p className="text-xs text-ink-muted">Select format for {editingAsset.name}</p>
+                  <h3 className="font-bold text-lg text-ink">Create New Design</h3>
+                  <p className="text-xs text-ink-muted">Start from scratch in Canva</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-2 hover:bg-brd rounded-lg transition-colors"
+              >
+                <X size={20} className="text-ink-muted" />
+              </button>
+            </div>
+
+            {/* Design Type Grid */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {designTypes.map((dt) => (
+                <button
+                  key={dt.id}
+                  onClick={() => startEditing(dt.id)}
+                  className={cn(
+                    "p-4 rounded-xl border text-left transition-all hover:border-accent hover:bg-accent/5"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {dt.id.includes('story') || dt.id.includes('reel') ? (
+                      <Video size={14} className="text-accent" />
+                    ) : dt.id.includes('youtube') ? (
+                      <Film size={14} className="text-accent" />
+                    ) : (
+                      <ImageIcon size={14} className="text-accent" />
+                    )}
+                    <span className="text-xs font-bold text-ink">{dt.label}</span>
+                  </div>
+                  <p className="text-[10px] text-ink-muted">
+                    {dt.id === 'instagram_post' && '1080 × 1080'}
+                    {dt.id === 'instagram_story' && '1080 × 1920'}
+                    {dt.id === 'instagram_reel' && '1080 × 1920'}
+                    {dt.id === 'youtube_thumbnail' && '1280 × 720'}
+                    {dt.id === 'youtube_shorts' && '1080 × 1920'}
+                    {dt.id === 'facebook_post' && '1200 × 630'}
+                    {dt.id === 'linkedin_post' && '1200 × 627'}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            {/* Brand Colors */}
+            <div className="border-t border-brd pt-4">
+              <p className="text-xs font-bold text-ink-muted mb-3">BRAND COLORS</p>
+              <div className="flex gap-2">
+                <div
+                  className="w-8 h-8 rounded-lg border border-brd"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
+                  title="Primary Green"
+                />
+                <div
+                  className="w-8 h-8 rounded-lg border border-brd"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.secondary }}
+                  title="Secondary Orange"
+                />
+                <div
+                  className="w-8 h-8 rounded-lg border border-brd"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.background }}
+                  title="Background"
+                />
+                <div
+                  className="w-8 h-8 rounded-lg border border-brd"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.text }}
+                  title="Text"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Existing Asset Modal */}
+      {showDesignModal && selectedAsset && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-brd rounded-2xl shadow-2xl max-w-lg w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
+                  <Palette className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-ink">Edit in Canva</h3>
+                  <p className="text-xs text-ink-muted">{selectedAsset.name}</p>
                 </div>
               </div>
               <button
@@ -411,40 +586,54 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
               </button>
             </div>
 
+            {/* Asset Preview */}
+            <div className="mb-6 p-4 bg-paper rounded-xl border border-brd">
+              {isVideo(selectedAsset.mimeType) ? (
+                <div className="flex items-center gap-3">
+                  <Video className="w-8 h-8 text-accent" />
+                  <span className="text-sm font-medium text-ink">Video file selected</span>
+                </div>
+              ) : (
+                <img
+                  src={selectedAsset.publicUrl}
+                  alt={selectedAsset.name}
+                  className="w-full max-h-48 object-contain rounded-lg"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+            </div>
+
             {/* Design Type Grid */}
             <div className="grid grid-cols-2 gap-3 mb-6">
-              {getDesignTypes()
-                .filter(dt => ['instagram_post', 'instagram_story', 'instagram_reel', 'youtube_thumbnail', 'youtube_shorts'].includes(dt.id))
-                .map((dt) => (
-                  <button
-                    key={dt.id}
-                    onClick={() => startEditing(dt.id)}
-                    className={cn(
-                      "p-4 rounded-xl border text-left transition-all",
-                      selectedDesignType === dt.id
-                        ? "border-accent bg-accent/5"
-                        : "border-brd hover:border-accent"
+              {designTypes.map((dt) => (
+                <button
+                  key={dt.id}
+                  onClick={() => startEditing(dt.id, selectedAsset.publicUrl)}
+                  className={cn(
+                    "p-4 rounded-xl border text-left transition-all hover:border-accent hover:bg-accent/5"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {dt.id.includes('story') || dt.id.includes('reel') ? (
+                      <Video size={14} className="text-accent" />
+                    ) : dt.id.includes('youtube') ? (
+                      <Film size={14} className="text-accent" />
+                    ) : (
+                      <ImageIcon size={14} className="text-accent" />
                     )}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      {dt.id.includes('story') || dt.id.includes('reel') ? (
-                        <Video size={14} className="text-accent" />
-                      ) : dt.id.includes('youtube') ? (
-                        <Film size={14} className="text-accent" />
-                      ) : (
-                        <ImageIcon size={14} className="text-accent" />
-                      )}
-                      <span className="text-xs font-bold text-ink">{dt.label}</span>
-                    </div>
-                    <p className="text-[10px] text-ink-muted">
-                      {dt.id === 'instagram_post' && '1080 × 1080'}
-                      {dt.id === 'instagram_story' && '1080 × 1920'}
-                      {dt.id === 'instagram_reel' && '1080 × 1920'}
-                      {dt.id === 'youtube_thumbnail' && '1280 × 720'}
-                      {dt.id === 'youtube_shorts' && '1080 × 1920'}
-                    </p>
-                  </button>
-                ))}
+                    <span className="text-xs font-bold text-ink">{dt.label}</span>
+                  </div>
+                  <p className="text-[10px] text-ink-muted">
+                    {dt.id === 'instagram_post' && '1080 × 1080'}
+                    {dt.id === 'instagram_story' && '1080 × 1920'}
+                    {dt.id === 'instagram_reel' && '1080 × 1920'}
+                    {dt.id === 'youtube_thumbnail' && '1280 × 720'}
+                    {dt.id === 'youtube_shorts' && '1080 × 1920'}
+                    {dt.id === 'facebook_post' && '1200 × 630'}
+                    {dt.id === 'linkedin_post' && '1200 × 627'}
+                  </p>
+                </button>
+              ))}
             </div>
 
             {/* Brand Colors */}
@@ -483,7 +672,7 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
                 Cancel
               </button>
               <button
-                onClick={() => startEditing(selectedDesignType)}
+                onClick={() => startEditing(selectedDesignType, selectedAsset.publicUrl)}
                 className="flex-1 px-4 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2"
               >
                 <Palette size={16} />
