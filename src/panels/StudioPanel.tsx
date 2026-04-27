@@ -23,7 +23,9 @@ import {
   FileVideo,
   Plus,
   Wand2,
-  ImagePlus
+  ImagePlus,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -266,22 +268,9 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
           </p>
         </div>
 
-        {/* Actions */}
+        {/* Status */}
         <div className="flex flex-col items-center md:items-end gap-2">
           <div className="flex gap-2">
-            <button
-              onClick={handleCreateNew}
-              disabled={!canvaReady}
-              className={cn(
-                "px-6 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all flex items-center gap-2",
-                canvaReady
-                  ? "bg-accent text-white shadow-lg shadow-accent/20 hover:bg-accent/90"
-                  : "bg-brd text-ink-muted cursor-not-allowed"
-              )}
-            >
-              <Wand2 size={16} />
-              Create in Canva
-            </button>
             <div className={cn(
               "text-[9px] font-mono font-bold uppercase tracking-widest px-3 py-1 rounded-full border",
               supabaseReady
@@ -290,9 +279,83 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
             )}>
               {supabaseReady ? 'SUPABASE_READY' : 'STORAGE_OFF'}
             </div>
+            <div className={cn(
+              "text-[9px] font-mono font-bold uppercase tracking-widest px-3 py-1 rounded-full border",
+              canvaReady
+                ? "text-accent bg-accent/10 border-accent/20"
+                : "text-rose-500 bg-rose-50 border-rose-100"
+            )}>
+              {canvaReady ? 'CANVA_READY' : 'CANVA_OFF'}
+            </div>
           </div>
         </div>
       </header>
+
+      {/* Quick Entry - 3 Main Actions */}
+      <section>
+        <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted mb-4 font-mono">Start Creating</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Upload */}
+          <button
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = 'image/*,video/*';
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) handleFileUpload(file);
+              };
+              input.click();
+            }}
+            disabled={isUploading || !supabaseReady}
+            className="group bg-card border border-brd rounded-2xl p-8 text-left hover:shadow-custom hover:-translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-accent/20 transition-colors">
+              <Upload size={28} className="text-accent" />
+            </div>
+            <h4 className="font-display text-xl font-bold mb-2">Upload Media</h4>
+            <p className="text-sm text-ink-muted">Upload photos and videos from your device</p>
+            <div className="mt-4 flex items-center gap-2 text-accent text-xs font-bold">
+              <span>Browse files</span>
+              <ChevronRight size={14} />
+            </div>
+          </button>
+
+          {/* Create in Canva */}
+          <button
+            onClick={handleCreateNew}
+            disabled={!canvaReady}
+            className="group bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-8 text-left hover:shadow-custom hover:-translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Palette size={28} className="text-white" />
+            </div>
+            <h4 className="font-display text-xl font-bold mb-2">Create Design</h4>
+            <p className="text-sm text-ink-muted">Design posts, stories and reels with Canva</p>
+            <div className="mt-4 flex items-center gap-2 text-purple-500 text-xs font-bold">
+              <span>Open Canva</span>
+              <ChevronRight size={14} />
+            </div>
+          </button>
+
+          {/* AI Generate */}
+          <button
+            onClick={() => onNavigate?.('generator')}
+            disabled={false}
+            className="group bg-gradient-to-br from-amber-500/10 to-green-500/10 border border-amber-500/20 rounded-2xl p-8 text-left hover:shadow-custom hover:-translate-y-1 transition-all"
+          >
+            <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-green-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Sparkles size={28} className="text-white" />
+            </div>
+            <h4 className="font-display text-xl font-bold mb-2">AI Generate</h4>
+            <p className="text-sm text-ink-muted">Generate captions and scripts with AI</p>
+            <div className="mt-4 flex items-center gap-2 text-amber-600 text-xs font-bold">
+              <span>Try AI</span>
+              <ChevronRight size={14} />
+            </div>
+          </button>
+        </div>
+      </section>
 
       {/* Folder Tabs */}
       <div className="flex gap-2 border-b border-brd pb-4">

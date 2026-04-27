@@ -75,6 +75,10 @@ import { initGoogleLibraries, openAssetPicker } from './services/googleAssetsSer
 import { initCanva, createDesignWithMedia } from './services/canvaService';
 import { StudioPanel } from './panels/StudioPanel';
 import { ConnectionsPanel } from './panels/ConnectionsPanel';
+import { CalendarPanel } from './panels/CalendarPanel';
+import { ScriptsPanel } from './panels/ScriptsPanel';
+import { StoriesPanel } from './panels/StoriesPanel';
+import { HomePanel } from './panels/HomePanel';
 
 export default function App() {
   const { user, loading } = useFirebase();
@@ -118,7 +122,7 @@ function LoginScreen() {
 }
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('home');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [scheduledPosts, setScheduledPosts] = useState<{ id: string, date: string, type: string, content: string, status: string }[]>([]);
   const { lang, setLang, t } = useTranslation();
@@ -163,61 +167,58 @@ function MainApp() {
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex flex-col md:flex-row min-h-screen bg-paper text-ink overflow-hidden"
     >
-      {/* Sidebar */}
-      <aside className="w-full md:w-[240px] bg-card border-r border-brd flex flex-col z-20 m-4 rounded-custom shadow-custom">
+      {/* Simplified Sidebar */}
+      <aside className="w-full md:w-[260px] bg-card border-r border-brd flex flex-col z-20 m-4 rounded-3xl shadow-custom">
         <div className="p-6 flex items-center gap-4">
-          <div className="w-10 h-10 bg-accent rounded-2xl flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-accent/20">N</div>
+          <div className="w-12 h-12 bg-accent rounded-2xl flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-accent/20">N</div>
           <div>
             <h1 className="font-sans text-xl font-bold tracking-tight">{t('appTitle')}</h1>
-            <p className="text-[10px] text-ink-muted uppercase tracking-widest font-bold font-mono">Hub v2.0</p>
+            <p className="text-[10px] text-ink-muted uppercase tracking-widest font-bold font-mono">Creator Hub</p>
           </div>
         </div>
 
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-          <div className="px-4 py-3 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">Analytics</div>
-          <NavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={18} />} label={t('dashboard')} />
-          
-          <div className="px-4 py-3 mt-4 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">Content</div>
-          <NavItem active={activeTab === 'visuals'} onClick={() => setActiveTab('visuals')} icon={<Palette size={18} />} label={t('visuals')} />
-          <NavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<Calendar size={18} />} label={t('calendar')} badge="May" />
-          <NavItem active={activeTab === 'generator'} onClick={() => setActiveTab('generator')} icon={<PenTool size={18} />} label={t('generator')} badge="AI" />
-          <NavItem active={activeTab === 'scripts'} onClick={() => setActiveTab('scripts')} icon={<Video size={18} />} label={t('scripts')} />
-          <NavItem active={activeTab === 'stories'} onClick={() => setActiveTab('stories')} icon={<Smartphone size={18} />} label={t('stories')} />
-          
-          <div className="px-4 py-3 mt-4 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">Strategy</div>
-          <NavItem active={activeTab === 'simulator'} onClick={() => setActiveTab('simulator')} icon={<TrendingUp size={18} />} label={t('simulator')} />
-          <NavItem active={activeTab === 'client'} onClick={() => setActiveTab('client')} icon={<User size={18} />} label={t('client')} />
-          <NavItem active={activeTab === 'methodology'} onClick={() => setActiveTab('methodology')} icon={<LayoutGrid size={18} />} label="Methodology" />
-          <NavItem active={activeTab === 'dach'} onClick={() => setActiveTab('dach')} icon={<Globe size={18} />} label={t('dach')} />
-          <NavItem active={activeTab === 'materialization'} onClick={() => setActiveTab('materialization')} icon={<Workflow size={18} />} label={t('materialization')} />
+          <div className="px-4 py-3 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">Menu</div>
+          <NavItem active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon={<LayoutDashboard size={18} />} label="Home" />
+          <NavItem active={activeTab === 'studio'} onClick={() => setActiveTab('visuals')} icon={<Palette size={18} />} label="Studio" />
+          <NavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<Calendar size={18} />} label="Calendar" />
+          <NavItem active={activeTab === 'generator'} onClick={() => setActiveTab('generator')} icon={<PenTool size={18} />} label="AI Generator" badge="AI" />
 
-          <div className="px-4 py-3 mt-4 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">System</div>
+          <div className="px-4 py-3 mt-6 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">Analytics</div>
+          <NavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<TrendingUp size={18} />} label="Instagram" />
+
+          <div className="px-4 py-3 mt-6 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">Strategy</div>
+          <NavItem active={activeTab === 'simulator'} onClick={() => setActiveTab('simulator')} icon={<TrendingUp size={18} />} label="Simulator" />
+          <NavItem active={activeTab === 'methodology'} onClick={() => setActiveTab('methodology')} icon={<LayoutGrid size={18} />} label="Methodology" />
+          <NavItem active={activeTab === 'dach'} onClick={() => setActiveTab('dach')} icon={<Globe size={18} />} label="DACH Market" />
+
+          <div className="px-4 py-3 mt-6 text-[10px] uppercase tracking-widest font-bold text-ink-muted opacity-60 font-mono">Settings</div>
           <NavItem active={activeTab === 'connections'} onClick={() => setActiveTab('connections')} icon={<Settings size={18} />} label="Connections" />
         </nav>
 
         <div className="p-4 bg-transparent mt-auto">
           <div className="flex items-center gap-3 p-3 bg-paper border border-brd rounded-2xl">
             <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-xs">NS</div>
-          <div className="flex flex-col">
-            <p className="text-xs font-bold truncate">{user?.displayName || 'Nicola Schaefer'}</p>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-green-custom rounded-full animate-pulse shadow-[0_0_8px_#467a49]"></div>
-              <button 
-                onClick={() => signOut()}
-                className="text-[9px] text-ink-muted font-mono font-bold tracking-tighter uppercase hover:text-rose-500"
-              >
-                LOGOUT
-              </button>
+            <div className="flex flex-col">
+              <p className="text-xs font-bold truncate">{user?.displayName || 'Nicola Schaefer'}</p>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-green-custom rounded-full animate-pulse shadow-[0_0_8px_#467a49]"></div>
+                <button
+                  onClick={() => signOut()}
+                  className="text-[9px] text-ink-muted font-mono font-bold tracking-tighter uppercase hover:text-rose-500"
+                >
+                  LOGOUT
+                </button>
+              </div>
             </div>
           </div>
-          </div>
-          
+
           <div className="mt-2 flex items-center justify-between px-3">
-             <div className="flex items-center gap-1.5">
-               <div className={cn("w-1 h-1 rounded-full", currentAccessToken ? "bg-green-custom shadow-[0_0_4px_#467a49]" : "bg-ink-muted/30")}></div>
-               <span className="text-[7px] font-mono font-bold uppercase tracking-widest opacity-40">Google_Asset_Link</span>
-             </div>
-             <span className="text-[7px] font-mono font-bold uppercase tracking-widest text-accent font-bold">{currentAccessToken ? 'SYNCED' : 'OFFLINE'}</span>
+            <div className="flex items-center gap-1.5">
+              <div className={cn("w-1 h-1 rounded-full", currentAccessToken ? "bg-green-custom shadow-[0_0_4px_#467a49]" : "bg-ink-muted/30")}></div>
+              <span className="text-[7px] font-mono font-bold uppercase tracking-widest opacity-40">Google_Asset_Link</span>
+            </div>
+            <span className="text-[7px] font-mono font-bold uppercase tracking-widest text-accent font-bold">{currentAccessToken ? 'SYNCED' : 'OFFLINE'}</span>
           </div>
         </div>
       </aside>
@@ -259,18 +260,10 @@ function MainApp() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
+              {activeTab === 'home' && <HomePanel onNavigate={setActiveTab} />}
               {activeTab === 'dashboard' && <DashboardPanel />}
               {activeTab === 'visuals' && <StudioPanel />}
-              {activeTab === 'calendar' && <CalendarPanel scheduledPosts={scheduledPosts} onUpdateStatus={async (id, status) => {
-                try {
-                  await updateDoc(doc(db, 'posts', id), { 
-                    status,
-                    updatedAt: serverTimestamp()
-                  });
-                } catch (error) {
-                  handleFirestoreError(error, OperationType.UPDATE, `posts/${id}`);
-                }
-              }} />}
+              {activeTab === 'calendar' && <CalendarPanel />}
               {activeTab === 'generator' && <GeneratorPanel onSchedule={async (postData) => {
                 if (!user) return;
                 try {
@@ -771,210 +764,6 @@ function Field({ label, children }: { label: string, children: React.ReactNode }
     <div className="space-y-1.5">
       <label className="text-[10px] font-bold uppercase tracking-wider text-ink/40 ml-1">{label}</label>
       {children}
-    </div>
-  );
-}
-
-// Implement Placeholder Panels for visual completeness in this turn
-
-function CalendarPanel({ scheduledPosts, onUpdateStatus }: { scheduledPosts: { id: string, date: string, type: string, content: string, status: string }[], onUpdateStatus: (id: string, status: string) => void }) {
-  const { t } = useTranslation();
-  const [view, setView] = useState<'grid' | 'list'>('grid');
-  
-  const sortedPosts = [...scheduledPosts].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent mb-4 font-mono">CONTENT_SCHEDULER_v1.2</div>
-          <h2 className="font-display text-5xl font-semibold mb-2 leading-tight">{t('calendar')}</h2>
-          <p className="text-sm text-ink-muted font-medium">Bilingual deployment queue // Status monitoring for DACH & LatAm pipelines.</p>
-        </div>
-        <div className="flex bg-card border border-brd rounded-2xl p-1 shadow-sm">
-          <button 
-            onClick={() => setView('grid')} 
-            className={cn("px-6 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all", view === 'grid' ? "bg-accent text-white shadow-lg shadow-accent/20" : "text-ink-muted hover:text-ink")}
-          >Grid</button>
-          <button 
-            onClick={() => setView('list')} 
-            className={cn("px-6 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all", view === 'list' ? "bg-accent text-white shadow-lg shadow-accent/20" : "text-ink-muted hover:text-ink")}
-          >Queue</button>
-        </div>
-      </header>
-
-      {view === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div className="bg-card border border-brd rounded-custom p-8 flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-paper transition-all h-full min-h-[220px]">
-             <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center text-accent mb-4 group-hover:scale-110 transition-transform">
-               <Plus size={24} />
-             </div>
-             <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{t('addToCal')}</p>
-          </div>
-          {sortedPosts.map((post) => (
-            <div key={post.id} className="bg-card border border-brd rounded-custom p-8 space-y-6 hover:shadow-custom transition-all group relative overflow-hidden h-full">
-              <div className={cn("absolute top-0 right-0 w-1.5 h-full", 
-                post.status === 'ready' ? "bg-green-custom" : "bg-amber-custom"
-              )}></div>
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-accent font-mono uppercase tracking-[0.2em]">{post.date}</span>
-                  <h4 className="font-display text-xl font-bold leading-tight group-hover:text-accent transition-colors truncate w-full">{post.content}</h4>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[9px] font-bold px-3 py-1 bg-paper border border-brd rounded-full text-ink-muted uppercase tracking-widest font-mono">
-                  {post.type.replace('_', ' ')}
-                </span>
-                <span className={cn(
-                  "text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest font-mono",
-                  post.status === 'ready' ? "bg-green-light text-green-custom" : "bg-amber-light text-amber-custom"
-                )}>
-                  {post.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-card border border-brd rounded-custom overflow-hidden shadow-custom">
-          <table className="w-full text-xs text-left border-collapse">
-            <thead className="text-[10px] font-bold text-ink-muted uppercase tracking-[0.2em] font-mono border-b border-brd opacity-60 bg-paper/50">
-              <tr>
-                <th className="px-8 py-4">SCHEDULED_DATE</th>
-                <th className="px-8 py-4">CONTENT_METADATA</th>
-                <th className="px-8 py-4">DEPLOYMENT_STATUS</th>
-                <th className="px-8 py-4 text-right">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brd">
-              {sortedPosts.map((post) => (
-                <tr key={post.id} className="hover:bg-paper transition-all group">
-                  <td className="px-8 py-6">
-                    <div className="flex flex-col">
-                      <span className="font-mono text-lg font-bold">{post.date.split('-')[2]}</span>
-                      <span className="text-[10px] font-bold uppercase opacity-60 font-mono">MAY_2026</span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 max-w-md">
-                    <div className="flex flex-col gap-2">
-                       <span className="font-bold text-sm leading-tight text-ink group-hover:text-accent transition-colors">{post.content}</span>
-                       <div className="flex gap-2">
-                         <span className="text-[9px] font-bold bg-accent/10 text-accent px-2 py-0.5 rounded-full font-mono uppercase tracking-widest">{post.type}</span>
-                         <span className="text-[9px] font-bold bg-paper border border-brd px-2 py-0.5 rounded-full font-mono uppercase tracking-widest opacity-60">BILINGUAL</span>
-                       </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <button 
-                      onClick={() => onUpdateStatus(post.id, post.status === 'ready' ? 'draft' : 'ready')}
-                      className={cn(
-                        "px-3 py-1 rounded-full font-mono font-bold text-[10px] border flex items-center gap-2 transition-all",
-                        post.status === 'ready' ? "bg-green-light border-green-custom text-green-custom" : "bg-amber-light border-amber-custom text-amber-custom"
-                      )}
-                    >
-                      {post.status === 'ready' ? <Check size={10} /> : <RefreshCcw size={10} />}
-                      {post.status.toUpperCase()}
-                    </button>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <button className="p-3 bg-paper border border-brd rounded-2xl hover:bg-brd transition-all active:scale-90 text-ink-muted">
-                      <ExternalLink size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ScriptsPanel() {
-  const { lang, t } = useTranslation();
-  
-  const scripts = [
-    { pillar: 'P1', title: { es: 'Éxito vs Vacío', de: 'Erfolg vs. Leere' }, es: 'Tienes todo lo que querías, pero el silencio de tu casa dice que algo falta...', de: 'Du hast alles, was du wolltest, aber die Stille in deinem Haus sagt dir, dass etwas fehlt...' },
-    { pillar: 'P2', title: { es: 'Método Sistémico', de: 'Systemische Methode' }, es: 'No es motivación, es entender los hilos invisibles que te mueven...', de: 'Keine Motivation, sondern das Verständnis der unsichtbaren Fäden que dich bewegen...' },
-    { pillar: 'P4', title: { es: 'De Munich a Ecuador', de: 'Von München nach Ecuador' }, es: 'Tomé la decisión más honesta de mi vida y asustó a todos...', de: 'Ich habe die ehrlichste Entscheidung meines Lebens getroffen und sie hat alle erschreckt...' },
-    { pillar: 'P5', title: { es: 'Brechas Afectivas', de: 'Affektive Lücken' }, es: '¿Por qué das tanto pero te cuesta tanto recibir?', de: 'Warum gibst du so viel, aber es fällt dir so schwer zu empfangen?' }
-  ];
-
-  return (
-    <div className="max-w-6xl mx-auto space-y-10 pb-20">
-      <header className="mb-10">
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent mb-4 font-mono">CONTENT_PRODUCTION_LOG</div>
-        <h2 className="font-display text-5xl font-semibold mb-4 leading-tight">{t('scripts')}</h2>
-        <p className="text-sm text-ink-muted max-w-xl font-medium font-sans leading-relaxed">Bilingual production scripts optimized for the DACH market emotional frequency. Ready to film.</p>
-      </header>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {scripts.map((script, i) => (
-          <div key={i} className="bg-card border border-brd p-10 rounded-custom hover:shadow-custom transition-all group overflow-hidden relative flex flex-col h-full">
-             <div className="absolute top-0 left-0 w-1.5 h-full bg-accent opacity-20 group-hover:opacity-100 transition-opacity"></div>
-             <div className="flex justify-between items-start mb-8">
-               <span className="text-[9px] font-bold bg-accent/20 text-accent px-3 py-1 rounded-full font-mono tracking-widest uppercase">{script.pillar}</span>
-               <div className="flex items-center gap-2 text-ink-muted opacity-40 font-mono text-[9px] font-bold uppercase tracking-wider">
-                 <Video size={12} />
-                 <span>25S // 4K // 30FPS</span>
-               </div>
-             </div>
-             <h3 className="font-display text-3xl mb-8 leading-tight font-bold tracking-tight text-ink">{script.title[lang]}</h3>
-             <div className="flex-1 space-y-8 text-sm leading-relaxed text-ink/80 bg-paper/50 p-8 rounded-3xl border border-brd/50 font-medium">
-               <div className="space-y-4">
-                 <div className="text-[9px] font-bold uppercase text-accent font-mono tracking-[0.2em]">VOICEOVER // SCRIPT</div>
-                 <p className="italic leading-relaxed">"{script[lang]}"</p>
-               </div>
-             </div>
-             <div className="grid grid-cols-2 gap-4 mt-10">
-               <button onClick={() => navigator.clipboard.writeText(script.es)} className="py-4 bg-paper border border-brd text-[10px] font-bold rounded-2xl hover:bg-brd uppercase tracking-[0.2em] transition-all active:scale-95 text-ink-muted hover:text-ink">Copy ES</button>
-               <button onClick={() => navigator.clipboard.writeText(script.de)} className="py-4 bg-paper border border-brd text-[10px] font-bold rounded-2xl hover:bg-brd uppercase tracking-[0.2em] transition-all active:scale-95 text-ink-muted hover:text-ink">Copy DE</button>
-             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StoriesPanel() {
-  const { lang, t } = useTranslation();
-  return (
-    <div className="max-w-6xl mx-auto space-y-10 pb-20">
-      <header className="mb-10 text-center md:text-left">
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent mb-4 font-mono">STORY_DEPLOYMENT_LOG</div>
-        <h2 className="font-display text-5xl font-semibold mb-4 leading-tight">{t('stories')}</h2>
-        <p className="text-sm text-ink-muted max-w-xl font-medium leading-relaxed font-sans mx-auto md:mx-0">Bilingual captions optimized for emotional engagement. Perfect for sequences.</p>
-      </header>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {STORIES_DATA.map((story, i) => (
-          <div key={i} className="bg-card border border-brd p-10 rounded-custom hover:shadow-custom hover:scale-[1.02] transition-all group relative overflow-hidden flex flex-col h-full">
-            <div className={cn("absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-bl-[80px] transition-all group-hover:scale-150", 
-              i % 2 === 0 ? "bg-accent/10" : "bg-green-custom/10")} />
-            <div className="flex items-center justify-between mb-8">
-               <div className="flex items-center gap-2">
-                 <div className={cn("w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]", i % 2 === 0 ? "text-accent bg-accent" : "text-green-custom bg-green-custom")} />
-                 <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-ink/40 font-mono">AUTO_SEQ_{i+1}</span>
-               </div>
-            </div>
-            <p className="flex-1 text-base leading-relaxed text-ink/90 italic mb-10 font-medium font-display">
-              "{story[lang]}"
-            </p>
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigator.clipboard.writeText(story[lang])}
-                className="p-4 bg-paper border border-brd rounded-2xl hover:bg-brd transition-all shrink-0 active:scale-90 text-ink shadow-sm"
-              >
-                <Copy size={20} />
-              </button>
-              <div className="flex-1 text-[9px] font-bold uppercase tracking-[0.2em] text-accent bg-accent/10 border border-accent/20 flex items-center justify-center p-4 rounded-2xl font-mono text-center">
-                {story.hash}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
