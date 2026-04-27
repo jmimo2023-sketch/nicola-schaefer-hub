@@ -57,7 +57,7 @@ type AssetType = 'images' | 'videos' | 'templates';
 type FilterType = 'all' | 'images' | 'videos';
 
 export function StudioPanel({ onNavigate }: StudioPanelProps) {
-  const { user, isTestMode } = useFirebase();
+  const { user } = useFirebase();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');

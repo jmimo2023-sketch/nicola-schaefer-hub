@@ -160,7 +160,7 @@ Generiere jetzt Content für: ${params.type} mit Pillar ${pillar?.label}`;
     futureDate.setDate(futureDate.getDate() + 7);
     const dateStr = futureDate.toISOString().split('T')[0];
 
-    addDoc(collection(db, 'posts'), {
+    addDoc(collection(db, 'calendar_posts'), {
       title: output.split('\n')[0].replace(/[#*]/g, '').trim().substring(0, 50) || `Generated ${params.type}`,
       content: output,
       type: params.type,
@@ -168,6 +168,7 @@ Generiere jetzt Content für: ${params.type} mit Pillar ${pillar?.label}`;
       date: dateStr,
       time: '18:00',
       status: 'scheduled',
+      platform: 'instagram',
       authorId: user.uid,
       createdAt: serverTimestamp()
     });

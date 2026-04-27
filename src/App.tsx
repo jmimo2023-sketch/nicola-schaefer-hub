@@ -263,7 +263,7 @@ function MainApp() {
             >
               {activeTab === 'home' && <HomePanel onNavigate={setActiveTab} />}
               {activeTab === 'dashboard' && <DashboardPanel />}
-              {activeTab === 'visuals' && <StudioPanel />}
+              {activeTab === 'visuals' && <StudioPanel onNavigate={setActiveTab} />}
               {activeTab === 'calendar' && <CalendarPanel />}
               {activeTab === 'generator' && <GeneratorPanel onNavigate={setActiveTab} />}
               {activeTab === 'scripts' && <ScriptsPanel />}
