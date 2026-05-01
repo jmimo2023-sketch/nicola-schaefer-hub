@@ -1,0 +1,60 @@
+{
+  "mode": "--current",
+  "results": [
+    {
+      "flow": "video_edit",
+      "description": "Upload > Configure > Process > Download (CURRENT)",
+      "simulations": 1000,
+      "successes": 644,
+      "abandonments": 356,
+      "completion_rate": 64.4,
+      "dead_end_rate": 35.6,
+      "avg_steps": 6.6,
+      "passed": false
+    },
+    {
+      "flow": "content_generation",
+      "description": "Pillar > Generate > Review > Schedule (CURRENT)",
+      "simulations": 1000,
+      "successes": 627,
+      "abandonments": 373,
+      "completion_rate": 62.7,
+      "dead_end_rate": 37.3,
+      "avg_steps": 6.6,
+      "passed": false
+    },
+    {
+      "flow": "calendar_approval",
+      "description": "Draft > Review > Approve > Schedule > Publish (CURRENT)",
+      "simulations": 1000,
+      "successes": 559,
+      "abandonments": 441,
+      "completion_rate": 55.9,
+      "dead_end_rate": 44.1,
+      "avg_steps": 6.4,
+      "passed": false
+    },
+    {
+      "flow": "asset_upload",
+      "description": "Files > Upload > Tag > Save (CURRENT)",
+      "simulations": 1000,
+      "successes": 738,
+      "abandonments": 262,
+      "completion_rate": 73.8,
+      "dead_end_rate": 26.2,
+      "avg_steps": 5.4,
+      "passed": false
+    },
+    {
+      "flow": "analytics_review",
+      "description": "Range > Metrics > Export (CURRENT)",
+      "simulations": 1000,
+      "successes": 654,
+      "abandonments": 346,
+      "completion_rate": 65.4,
+      "dead_end_rate": 34.6,
+      "avg_steps": 4.6,
+      "passed": false
+    }
+  ]
+}

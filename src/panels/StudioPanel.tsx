@@ -30,6 +30,8 @@ import {
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import { useFirebase } from '../lib/FirebaseProvider';
+import { EmptyState } from '../components/EmptyState';
+import { SkeletonGrid } from '../components/SkeletonComponents';
 import {
   initCanva,
   createDesignWithMedia,
@@ -473,17 +475,33 @@ export function StudioPanel({ onNavigate }: StudioPanelProps) {
 
       {/* Assets Grid */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <RefreshCw className="w-8 h-8 text-accent animate-spin" />
-        </div>
+        <SkeletonGrid items={10} />
       ) : filteredAssets.length === 0 ? (
-        <div className="py-20 border-2 border-dashed border-brd rounded-custom flex flex-col items-center justify-center text-ink-muted gap-4">
-          <FolderOpen size={48} />
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest">
-            No {filter === 'all' ? folder : filter} yet
-          </p>
-          <p className="text-xs">Upload something or create directly in Canva</p>
-        </div>
+        <EmptyState
+          icon="media"
+          title={`Your ${folder} library is empty`}
+          description="Start by uploading photos or videos you want to use for your content. Supported: JPG, PNG, MP4, MOV"
+          action={{
+            label: "Upload Media",
+            icon: <Upload size={18} />,
+            onClick: () => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = 'image/*,video/*';
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) handleFileUpload(file);
+              };
+              input.click();
+            }
+          }}
+          secondaryAction={{
+            label: "Create in Canva",
+            icon: <Palette size={18} />,
+            onClick: handleCreateNew
+          }}
+          tip="Keep your brand visuals consistent for better engagement! Use the same filters and color grading."
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {filteredAssets.map((asset) => (

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inti Soul Retreat 2027 — Vilcabamba, Ecuador</title>
+  <meta name="description" content="Ein Ort der atmet. Der hält. Der wirklich verändert. 10 Tage Transformation in den Anden.">
+  <meta property="og:title" content="Inti Soul Retreat 2027">
+  <meta property="og:description" content="Transformation in den Anden — Vilcabamba, Ecuador">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#120E07">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{--gold:#C8A96A;--dark:#120E07;--cream:#F4ECD8;--green:#467a49;--deep:#0a0705}
+    html{scroll-behavior:smooth}
+    body{background:var(--deep);color:var(--cream);font-family:'Raleway',sans-serif;line-height:1.7;overflow-x:hidden}
+    a{color:var(--gold);text-decoration:none;transition:all 0.3s}
+    a:hover{color:#fff}
+
+    /* NAV */
+    .nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 40px;display:flex;justify-content:space-between;align-items:center;transition:all 0.4s}
+    .nav.scrolled{background:rgba(10,7,5,0.95);backdrop-filter:blur(20px);padding:12px 40px}
+    .nav-logo{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);letter-spacing:3px;text-transform:uppercase}
+    .nav-links{display:flex;gap:32px;list-style:none}
+    .nav-links a{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(244,236,216,0.6);transition:color 0.3s}
+    .nav-links a:hover{color:var(--gold)}
+    .nav-cta{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--dark);background:var(--gold);padding:12px 28px;border:none;cursor:pointer;font-family:'Raleway',sans-serif;font-weight:500;transition:all 0.3s}
+    .nav-cta:hover{background:#dfc48b;transform:translateY(-1px)}
+
+    /* HERO */
+    .hero{position:relative;height:100vh;min-height:700px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,#1a1208 0%,#2a1f10 30%,#120e07 70%,#0a0705 100%)}
+    .hero-overlay{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 30%,rgba(10,7,5,0.7) 100%)}
+    .hero-pattern{position:absolute;inset:0;opacity:0.04;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23C8A96A' stroke-width='0.5'%3E%3Ccircle cx='200' cy='200' r='80'/%3E%3Ccircle cx='200' cy='120' r='80'/%3E%3Ccircle cx='200' cy='280' r='80'/%3E%3Ccircle cx='131' cy='160' r='80'/%3E%3Ccircle cx='131' cy='240' r='80'/%3E%3Ccircle cx='269' cy='160' r='80'/%3E%3Ccircle cx='269' cy='240' r='80'/%3E%3Ccircle cx='200' cy='200' r='160'/%3E%3C/g%3E%3C/svg%3E");background-size:400px 400px}
+    .hero-content{position:relative;z-index:2;text-align:center;padding:0 24px;max-width:800px}
+    .hero-pre{font-size:12px;letter-spacing:6px;text-transform:uppercase;color:var(--gold);margin-bottom:24px;display:block}
+    .hero-title{font-family:'Playfair Display',serif;font-size:clamp(40px,8vw,80px);font-weight:400;line-height:1.05;color:var(--cream);margin-bottom:24px}
+    .hero-title em{font-style:italic;color:var(--gold)}
+    .hero-sub{font-size:18px;font-weight:200;letter-spacing:2px;color:rgba(244,236,216,0.7);margin-bottom:48px;line-height:1.7}
+    .hero-cta{display:inline-block;border:1px solid var(--gold);padding:16px 48px;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);transition:all 0.4s;cursor:pointer}
+    .hero-cta:hover{background:var(--gold);color:var(--dark)}
+    .hero-scroll{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:4px;text-transform:uppercase;color:rgba(244,236,216,0.3);animation:float 2s ease-in-out infinite}
+    @keyframes float{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-10px)}}
+
+    /* SECTIONS */
+    .section{padding:120px 24px;max-width:1000px;margin:0 auto}
+    .section-label{font-size:10px;letter-spacing:6px;text-transform:uppercase;color:var(--gold);margin-bottom:20px;display:block}
+    .section-title{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,56px);font-weight:400;line-height:1.15;margin-bottom:32px}
+    .section-title em{font-style:italic;color:var(--gold)}
+    .section-text{font-size:17px;font-weight:300;letter-spacing:0.5px;color:rgba(244,236,216,0.75);line-height:1.8;max-width:600px}
+    .gold-line{width:60px;height:1px;background:var(--gold);margin:32px 0}
+
+    /* ABOUT */
+    .about{background:linear-gradient(180deg,var(--deep) 0%,#161008 50%,var(--deep) 100%)}
+    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+    .about-image{position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden}
+    .about-image img{width:100%;height:100%;object-fit:cover}
+    .about-image::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(10,7,5,0.6) 0%,transparent 50%)}
+
+    /* EXPERIENCE */
+    .experience-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:64px}
+    .exp-card{position:relative;padding:48px 32px;border:1px solid rgba(200,169,106,0.15);border-radius:8px;background:rgba(200,169,106,0.03);transition:all 0.4s}
+    .exp-card:hover{border-color:rgba(200,169,106,0.4);transform:translateY(-4px)}
+    .exp-card-icon{font-size:40px;margin-bottom:24px;display:block}
+    .exp-card h3{font-family:'Playfair Display',serif;font-size:22px;color:var(--cream);margin-bottom:16px}
+    .exp-card p{font-size:14px;font-weight:300;color:rgba(244,236,216,0.6);line-height:1.7}
+
+    /* PROGRAM */
+    .program{background:var(--dark)}
+    .program-item{display:grid;grid-template-columns:120px 1fr;gap:32px;padding:40px 0;border-bottom:1px solid rgba(200,169,106,0.1);align-items:start}
+    .program-day{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--gold)}
+    .program-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--cream);margin-bottom:8px}
+    .program-desc{font-size:14px;font-weight:300;color:rgba(244,236,216,0.55);line-height:1.7}
+
+    /* TESTIMONIAL */
+    .testimonial{text-align:center;max-width:700px;margin:0 auto}
+    .testimonial-quote{font-family:'Playfair Display',serif;font-size:clamp(24px,4vw,36px);font-weight:400;font-style:italic;line-height:1.4;color:var(--cream);margin-bottom:32px}
+    .testimonial-quote::before{content:'"';color:var(--gold);font-size:80px;line-height:0;display:block;margin-bottom:-20px}
+    .testimonial-author{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--gold)}
+
+    /* CTA */
+    .cta{position:relative;padding:160px 24px;text-align:center;background:linear-gradient(180deg,var(--deep) 0%,#1a1208 50%,var(--deep) 100%)}
+    .cta-pattern{position:absolute;inset:0;opacity:0.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23C8A96A' stroke-width='0.5' transform='translate(200,200)'%3E%3Ccircle r='180'/%3E%3Ccircle r='140'/%3E%3C/g%3E%3C/svg%3E");background-size:400px 400px}
+    .cta-box{position:relative;z-index:2;border:1px solid rgba(200,169,106,0.3);padding:64px 48px;max-width:600px;margin:0 auto}
+    .cta-price{font-family:'Playfair Display',serif;font-size:48px;color:var(--cream);margin:24px 0 8px}
+    .cta-price span{font-size:18px;font-weight:200;color:rgba(244,236,216,0.5)}
+    .cta-includes{text-align:left;margin:32px 0;padding:24px 0;border-top:1px solid rgba(200,169,106,0.15);border-bottom:1px solid rgba(200,169,106,0.15)}
+    .cta-includes li{font-size:14px;font-weight:300;color:rgba(244,236,216,0.7);padding:8px 0;list-style:none;padding-left:24px;position:relative}
+    .cta-includes li::before{content:'✦';position:absolute;left:0;color:var(--gold);font-size:10px}
+
+    /* FOOTER */
+    .footer{padding:48px 24px;border-top:1px solid rgba(200,169,106,0.1);text-align:center}
+    .footer p{font-size:12px;letter-spacing:2px;color:rgba(244,236,216,0.3);text-transform:uppercase}
+
+    /* RESPONSIVE */
+    @media(max-width:768px){
+      .nav-links{display:none}
+      .about-grid{grid-template-columns:1fr;gap:48px}
+      .experience-cards{grid-template-columns:1fr}
+      .program-item{grid-template-columns:1fr;gap:16px}
+      .cta-box{padding:40px 24px}
+      .section{padding:80px 20px}
+    }
+
+    /* ANIMATIONS */
+    .fade-up{opacity:0;transform:translateY(40px);transition:all 0.8s cubic-bezier(0.16,1,0.3,1)}
+    .fade-up.visible{opacity:1;transform:translateY(0)}
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="nav-logo">Inti Soul</div>
+    <ul class="nav-links">
+      <li><a href="#about">Über</a></li>
+      <li><a href="#experience">Erfahrung</a></li>
+      <li><a href="#program">Programm</a></li>
+      <li><a href="#reserve">Reservieren</a></li>
+    </ul>
+    <a href="#reserve" class="nav-cta">Jetzt reservieren</a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-pattern"></div>
+    <div class="hero-content">
+      <span class="hero-pre">Vilcabamba · Ecuador · 2027</span>
+      <h1 class="hero-title">Ein Ort der <em>atmet</em>.<br>Der hält.<br>Der wirklich <em>verändert</em>.</h1>
+      <p class="hero-sub">10 Tage Transformation in den Anden — Heilung, Zeremonie, Gemeinschaft</p>
+      <a href="#reserve" class="hero-cta">Platz sichern</a>
+    </div>
+    <div class="hero-scroll">Scrollen</div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about section" id="about">
+    <div class="about-grid">
+      <div>
+        <span class="section-label fade-up">Das Retreat</span>
+        <h2 class="section-title fade-up">Inti Soul Retreat</h2>
+        <div class="gold-line fade-up"></div>
+        <p class="section-text fade-up">
+          Ich suche den perfekten Ort für euch. Einen Ort der atmet. Der hält. Der wirklich verändert. 
+          <br><br>
+          Vilcabamba — das Tal der Langlebigkeit in den südecuadorianischen Anden. Wo die Berge dich halten. 
+          Wo die Pflanzen mit dir sprechen. Wo die Zeremonie nicht Performance ist, sondern Erinnerung.
+          <br><br>
+          10 Tage. 8 Teilnehmer. Keine Kompromisse.
+        </p>
+      </div>
+      <div class="about-image fade-up">
+        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80" alt="Vilcabamba Anden" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPERIENCE -->
+  <section class="section" id="experience">
+    <div style="text-align:center">
+      <span class="section-label fade-up">Die Erfahrung</span>
+      <h2 class="section-title fade-up">Was dich <em>erwartet</em></h2>
+    </div>
+    <div class="experience-cards">
+      <div class="exp-card fade-up">
+        <span class="exp-card-icon">🌿</span>
+        <h3>Plantas Maestras</h3>
+        <p>Arbeit mit heiligen Pflanzen unter fachkundiger Führung. Ayahuasca, San Pedro, Tabaco — die alten Lehrer der Anden.</p>
+      </div>
+      <div class="exp-card fade-up">
+        <span class="exp-card-icon">🏔️</span>
+        <h3>Anden-Zeremonien</h3>
+        <p>Despacho-Zeremonie mit einem echten Paqo. offerings an Pachamama. Feuerzeremonie. Temazcal. Jedes Ritual hat einen Zweck.</p>
+      </div>
+      <div class="exp-card fade-up">
+        <span class="exp-card-icon">✨</span>
+        <h3>Integrationsarbeit</h3>
+        <p>Systemisches Coaching, Atemarbeit, Achtsamkeitspraxis. Nicht nur Zeremonie — sondern echte Verarbeitung und Integration in dein Leben.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROGRAM -->
+  <section class="program section" id="program">
+    <span class="section-label fade-up">Das Programm</span>
+    <h2 class="section-title fade-up">10 Tage <em>Transformation</em></h2>
+
+    <div class="program-item fade-up">
+      <div class="program-day">Tag 1–2</div>
+      <div>
+        <div class="program-title">Ankunft & Erdung</div>
+        <div class="program-desc">Landung in Vilcabamba. Eingewöhnung in der Eco Lodge Izhcayluma. Erste Zeremonie zur Reinigung und Erdung. Intention-setting.</div>
+      </div>
+    </div>
+    <div class="program-item fade-up">
+      <div class="program-day">Tag 3–4</div>
+      <div>
+        <div class="program-title">Plantas Maestras</div>
+        <div class="program-desc">Erste Ayahuasca-Zeremonie. Vorbereitung, Diät, Integration. Arbeit mit den heiligen Pflanzen der Anden unter erfahrener Führung.</div>
+      </div>
+    </div>
+    <div class="program-item fade-up">
+      <div class="program-day">Tag 5–6</div>
+      <div>
+        <div class="program-title">Anden-Rituale</div>
+        <div class="program-desc">Despacho-Zeremonie mit einem Paqo. Temazcal — das Schwitzhaus der Reinigung. San Pedro-Zeremonie in der Natur.</div>
+      </div>
+    </div>
+    <div class="program-item fade-up">
+      <div class="program-day">Tag 7–8</div>
+      <div>
+        <div class="program-title">Tiefe & Stille</div>
+        <div class="program-desc">Schweigetag. Atemarbeit. Systemisches Coaching zur Integration der Erfahrungen. Körperarbeit und Reflexion.</div>
+      </div>
+    </div>
+    <div class="program-item fade-up">
+      <div class="program-day">Tag 9–10</div>
+      <div>
+        <div class="program-title">Integration & Rückkehr</div>
+        <div class="program-desc">Abschlusszeremonie. Persönlicher Integrationsplan. Austausch und Closing. Du gehst nicht gleich — du gehst transformiert.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIAL -->
+  <section class="section" style="text-align:center">
+    <div class="testimonial fade-up">
+      <div class="testimonial-quote">Ich war unterwegs. Für euch. Und ich habe den Ort gefunden, der wirklich hält.</div>
+      <div class="testimonial-author">— Nicola Schaefer</div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta section" id="reserve">
+    <div class="cta-pattern"></div>
+    <div class="fade-up">
+      <span class="section-label">Reservierung</span>
+      <h2 class="section-title" style="text-align:center;margin:0 auto">Dein Platz im <em>Kreis</em></h2>
+    </div>
+    <div class="cta-box fade-up">
+      <p style="font-size:14px;font-weight:300;color:rgba(244,236,216,0.6);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Inti Soul Retreat 2027</p>
+      <div class="cta-price">€2.497 <span>/ Person</span></div>
+      <p style="font-size:13px;font-weight:300;color:rgba(244,236,216,0.5)">Einzimmer · 10 Nächte · Vollpension · Alle Zeremonien</p>
+      <ul class="cta-includes">
+        <li>10 Nächte in der Eco Lodge Izhcayluma</li>
+        <li>Alle Zeremonien (Ayahuasca, San Pedro, Temazcal, Despacho)</li>
+        <li>Systemisches Coaching & Integrationsarbeit</li>
+        <li>Vollpension mit lokaler, biologischer Küche</li>
+        <li>Flughafentransfer Loja → Vilcabamba</li>
+        <li>Persönlicher Integrationsplan</li>
+        <li>Max. 8 Teilnehmer — intimer Kreis</li>
+      </ul>
+      <p style="font-size:12px;color:rgba(244,236,216,0.4);margin-bottom:32px;letter-spacing:1px">Anzahlung: €500 · Rest bis 60 Tage vor Retreat</p>
+      <a href="https://wa.me/573054636733?text=Hallo%20Nicola%2C%20ich%20m%C3%B6chte%20einen%20Platz%20f%C3%BCr%20das%20Inti%20Soul%20Retreat%202027%20reservieren." class="hero-cta" style="display:inline-block;margin-top:16px">Jetzt Platz sichern</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p>© 2026 Nicola Schaefer · Inti Soul Retreat · Alle Rechte vorbehalten</p>
+    <p style="margin-top:8px;font-size:10px;color:rgba(244,236,216,0.2)">Vilcabamba · Ecuador · Das Tal der Langlebigkeit</p>
+  </footer>
+
+  <script>
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+    // Nav scroll effect
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelector(this.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  </script>
+</body>
+</html>

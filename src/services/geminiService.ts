@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const API_KEY = process.env.GEMINI_API_KEY || "";
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY || "";
 
 class GeminiService {
   private ai: any = null;
@@ -13,12 +13,12 @@ class GeminiService {
 
   async generateContent(prompt: string) {
     if (!this.ai) {
-      throw new Error("Gemini API Key is missing. Please configure it in the Secrets panel.");
+      throw new Error("Gemini API Key is missing. Please configure VITE_GEMINI_API_KEY in .env");
     }
 
     try {
       const response = await this.ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.5-flash",
         contents: prompt
       });
       return response.text;

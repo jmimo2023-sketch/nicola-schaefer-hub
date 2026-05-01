@@ -1,6 +1,5 @@
 /**
- * Home Panel v2 - Creator Dashboard
- * Quick actions, upcoming posts, AI insights
+ * Home Panel v3 - Creator Dashboard (Responsive)
  */
 
 import React from 'react';
@@ -38,13 +37,6 @@ interface UpcomingPost {
   status: 'draft' | 'scheduled' | 'published';
 }
 
-interface QuickStat {
-  label: string;
-  value: string;
-  delta?: string;
-  icon: React.ReactNode;
-}
-
 export function HomePanel({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const { t } = useTranslation();
   const { user } = useFirebase();
@@ -74,23 +66,23 @@ export function HomePanel({ onNavigate }: { onNavigate: (tab: string) => void })
 
   const quickActions = [
     {
-      label: 'Create Post',
-      icon: <Plus size={24} />,
-      description: 'Upload or generate new content',
+      label: t('createPost'),
+      icon: <Plus size={20} />,
+      description: t('uploadDescription'),
       color: 'accent',
       tab: 'studio'
     },
     {
-      label: 'Schedule',
-      icon: <Calendar size={24} />,
-      description: 'Plan your content calendar',
+      label: t('schedule'),
+      icon: <Calendar size={20} />,
+      description: t('planAndTrack'),
       color: 'green',
       tab: 'calendar'
     },
     {
-      label: 'Analytics',
-      icon: <TrendingUp size={24} />,
-      description: 'View your performance',
+      label: t('viewAnalytics'),
+      icon: <TrendingUp size={20} />,
+      description: t('viewAnalytics'),
       color: 'amber',
       tab: 'dashboard'
     }
@@ -98,77 +90,76 @@ export function HomePanel({ onNavigate }: { onNavigate: (tab: string) => void })
 
   const getTimeOfDay = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return t('goodMorning');
+    if (hour < 18) return t('goodAfternoon');
+    return t('goodEvening');
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      {/* Header */}
-      <header className="space-y-2">
-        <h1 className="font-display text-4xl font-bold tracking-tight">
-          {getTimeOfDay()}, Nicola 👋
+    <div className="w-full space-y-6 sm:space-y-8">
+      {/* Header - Compact & Centered */}
+      <header className="text-center py-4 sm:py-6">
+        <h1 className="font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tight mb-1">
+          {getTimeOfDay()}, Nicola
         </h1>
-        <p className="text-ink-muted text-lg">Here's what's happening with your content</p>
+        <p className="text-ink-muted text-xs sm:text-sm">{t('thisWeek')}</p>
       </header>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Quick Stats - Compact */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <StatCard
-          label="Posts this week"
+          label={t('postsThisWeek')}
           value={stats.postsThisWeek.toString()}
-          icon={<FileText size={20} />}
-          delta="On track"
+          icon={<FileText size={14} />}
+          delta={t('onTrack')}
           color="accent"
         />
         <StatCard
-          label="Engagement"
+          label={t('engagement')}
           value={stats.engagement}
-          icon={<TrendingUp size={20} />}
-          delta="vs last week"
+          icon={<TrendingUp size={14} />}
+          delta={t('vsLastWeek')}
           color="green"
         />
         <StatCard
-          label="New followers"
+          label={t('newFollowers')}
           value={`+${stats.followers}`}
-          icon={<Sparkles size={20} />}
-          delta="This month"
+          icon={<Sparkles size={14} />}
+          delta={t('thisMonth')}
           color="amber"
         />
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Compact Grid */}
       <section>
-        <h2 className="text-xs font-bold uppercase tracking-widest text-ink-muted mb-4 font-mono">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <h2 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-ink-muted mb-3 font-mono">{t('quickActions')}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           {quickActions.map((action, i) => (
             <button
               key={i}
               onClick={() => onNavigate(action.tab)}
               className={cn(
-                "group relative bg-card border border-brd rounded-3xl p-8 text-left transition-all hover:shadow-custom hover:-translate-y-1 overflow-hidden"
+                "group relative bg-card border border-brd rounded-xl sm:rounded-2xl p-4 sm:p-5 text-left transition-all hover:shadow-custom hover:-translate-y-1 overflow-hidden"
               )}
             >
               <div className={cn(
-                "absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-10 transition-transform group-hover:scale-150",
+                "absolute top-0 right-0 w-16 sm:w-20 h-16 sm:h-20 rounded-bl-full opacity-10 transition-transform group-hover:scale-150",
                 action.color === 'accent' && "bg-accent",
                 action.color === 'green' && "bg-green-custom",
                 action.color === 'amber' && "bg-amber-custom"
               )} />
               <div className={cn(
-                "w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110",
+                "w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-105",
                 action.color === 'accent' && "bg-accent/10 text-accent",
                 action.color === 'green' && "bg-green-light text-green-custom",
                 action.color === 'amber' && "bg-amber-light text-amber-custom"
               )}>
                 {action.icon}
               </div>
-              <h3 className="font-display text-xl font-bold mb-2">{action.label}</h3>
-              <p className="text-sm text-ink-muted font-medium">{action.description}</p>
-              <div className="mt-6 flex items-center gap-2 text-accent text-xs font-bold">
-                <span>Get started</span>
-                <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+              <h3 className="font-display text-sm sm:text-base font-bold mb-1">{action.label}</h3>
+              <div className="flex items-center gap-1 text-accent text-[10px] sm:text-xs font-bold">
+                <span>{t('viewAll')}</span>
+                <ArrowRight size={10} className="transition-transform group-hover:translate-x-1" />
               </div>
             </button>
           ))}
@@ -177,108 +168,106 @@ export function HomePanel({ onNavigate }: { onNavigate: (tab: string) => void })
 
       {/* Upcoming Posts */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-ink-muted font-mono">Upcoming Posts</h2>
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h2 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-ink-muted font-mono">{t('upcomingPosts')}</h2>
           <button
             onClick={() => onNavigate('calendar')}
-            className="text-xs font-bold text-accent hover:underline flex items-center gap-1"
+            className="text-[10px] sm:text-xs font-bold text-accent hover:underline flex items-center gap-1"
           >
-            View all <ChevronRight size={14} />
+            View all <ChevronRight size={12} />
           </button>
         </div>
 
         {upcomingPosts.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {upcomingPosts.map((post) => (
               <div
                 key={post.id}
-                className="bg-card border border-brd rounded-2xl p-6 flex items-center gap-4 hover:shadow-custom transition-all cursor-pointer"
+                className="bg-card border border-brd rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 flex items-center gap-3 sm:gap-4 hover:shadow-custom transition-all cursor-pointer"
                 onClick={() => onNavigate('calendar')}
               >
                 <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center",
+                  "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0",
                   post.type === 'image' && "bg-accent/10 text-accent",
                   post.type === 'video' && "bg-rose-light text-rose-500",
                   post.type === 'reel' && "bg-purple-light text-purple-500",
                   post.type === 'story' && "bg-amber-light text-amber-custom"
                 )}>
-                  {post.type === 'image' && <ImageIcon size={20} />}
-                  {post.type === 'video' && <Video size={20} />}
-                  {post.type === 'reel' && <Video size={20} />}
-                  {post.type === 'story' && <Clock size={20} />}
+                  {post.type === 'image' && <ImageIcon size={18} />}
+                  {post.type === 'video' && <Video size={18} />}
+                  {post.type === 'reel' && <Video size={18} />}
+                  {post.type === 'story' && <Clock size={18} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-sm truncate">{post.title || 'Untitled post'}</h4>
-                  <div className="flex items-center gap-3 text-xs text-ink-muted">
+                  <h4 className="font-bold text-xs sm:text-sm truncate">{post.title || 'Untitled post'}</h4>
+                  <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-ink-muted">
                     <span className="flex items-center gap-1">
-                      <Calendar size={12} />
+                      <Calendar size={10} />
                       {post.date}
                     </span>
                     {post.time && (
                       <span className="flex items-center gap-1">
-                        <Clock size={12} />
+                        <Clock size={10} />
                         {post.time}
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                   <span className={cn(
-                    "text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest",
+                    "text-[9px] sm:text-[10px] font-bold px-2 sm:px-3 py-1 rounded-full uppercase tracking-widest",
                     post.status === 'draft' && "bg-amber-light text-amber-custom border border-amber-custom/20",
                     post.status === 'scheduled' && "bg-green-light text-green-custom border border-green-custom/20"
                   )}>
                     {post.status}
                   </span>
-                  <ChevronRight size={16} className="text-ink-muted" />
+                  <ChevronRight size={14} className="text-ink-muted" />
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-card border border-brd border-dashed rounded-3xl p-12 text-center">
-            <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calendar size={28} className="text-accent" />
+          <div className="bg-card border border-brd border-dashed rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Calendar size={20} className="text-accent" />
             </div>
-            <h3 className="font-display text-xl font-bold mb-2">No upcoming posts</h3>
-            <p className="text-sm text-ink-muted mb-6">Start scheduling content to see it here</p>
+            <h3 className="font-display text-sm sm:text-base font-bold mb-1">No upcoming posts</h3>
+            <p className="text-[10px] sm:text-xs text-ink-muted mb-4">Start scheduling content</p>
             <button
               onClick={() => onNavigate('studio')}
-              className="inline-flex items-center gap-2 bg-accent text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-accent/90 transition-colors"
+              className="inline-flex items-center gap-1.5 bg-accent text-white px-4 sm:px-5 py-2 rounded-lg font-bold text-[10px] sm:text-xs hover:bg-accent/90 transition-colors"
             >
-              <Plus size={18} />
-              Create your first post
+              <Plus size={12} />
+              Create post
             </button>
           </div>
         )}
       </section>
 
-      {/* AI Insight Card */}
-      <section className="bg-gradient-to-br from-accent/10 to-green-light/10 border border-accent/20 rounded-3xl p-8">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center shrink-0">
-            <Sparkles size={24} className="text-accent" />
+      {/* AI Insight Card - Compact */}
+      <section className="bg-gradient-to-br from-accent/10 to-green-light/10 border border-accent/20 rounded-xl sm:rounded-2xl p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-accent/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+            <Sparkles size={14} className="text-accent" />
           </div>
           <div className="flex-1">
-            <h3 className="font-display text-xl font-bold mb-2">AI Insight</h3>
-            <p className="text-ink leading-relaxed">
-              Your best performing content this week was <strong>personal reflection posts</strong> with an 8.5% engagement rate.
-              Posts published at <strong>6:00 PM</strong> on Thursdays received 2x more saves than average.
-              Consider scheduling more P1 pillar content for optimal reach.
+            <h3 className="font-display text-sm sm:text-base font-bold mb-1">AI Insight</h3>
+            <p className="text-[10px] sm:text-xs text-ink leading-relaxed">
+              Best performing: <strong>personal reflection posts</strong> with 8.5% ER. <strong>Thursdays 6PM</strong> get 2x more saves.
             </p>
-            <div className="mt-6 flex gap-3">
+            <div className="mt-3 flex flex-col sm:flex-row gap-2">
               <button
                 onClick={() => onNavigate('generator')}
-                className="flex items-center gap-2 bg-accent text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-accent/90 transition-colors"
+                className="flex items-center justify-center gap-1.5 bg-accent text-white px-3 sm:px-4 py-1.5 rounded-lg font-bold text-[10px] sm:text-xs hover:bg-accent/90 transition-colors"
               >
-                <Sparkles size={16} />
-                Generate content
+                <Sparkles size={12} />
+                Generate
               </button>
               <button
                 onClick={() => onNavigate('dashboard')}
-                className="flex items-center gap-2 bg-card border border-brd px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-paper transition-colors"
+                className="flex items-center justify-center gap-1.5 bg-card border border-brd px-3 sm:px-4 py-1.5 rounded-lg font-bold text-[10px] sm:text-xs hover:bg-paper transition-colors"
               >
-                View detailed analytics
+                Analytics
               </button>
             </div>
           </div>
@@ -296,11 +285,11 @@ function StatCard({ label, value, icon, delta, color }: {
   color: 'accent' | 'green' | 'amber';
 }) {
   return (
-    <div className="bg-card border border-brd rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-xs text-ink-muted font-medium">{label}</span>
+    <div className="bg-card border border-brd rounded-lg sm:rounded-xl p-2 sm:p-3">
+      <div className="flex items-center justify-between mb-1 sm:mb-2">
+        <span className="text-[9px] sm:text-[10px] text-ink-muted font-medium truncate pr-1">{label}</span>
         <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center",
+          "w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center shrink-0",
           color === 'accent' && "bg-accent/10 text-accent",
           color === 'green' && "bg-green-light text-green-custom",
           color === 'amber' && "bg-amber-light text-amber-custom"
@@ -309,9 +298,9 @@ function StatCard({ label, value, icon, delta, color }: {
         </div>
       </div>
       <div className="flex items-end justify-between">
-        <span className="font-display text-3xl font-bold">{value}</span>
+        <span className="font-display text-base sm:text-lg lg:text-xl font-bold">{value}</span>
         {delta && (
-          <span className="text-xs font-bold text-green-custom bg-green-light px-2 py-1 rounded-full">
+          <span className="text-[8px] sm:text-[9px] font-bold text-green-custom bg-green-light px-1 sm:px-1.5 py-0.5 rounded-full">
             {delta}
           </span>
         )}
