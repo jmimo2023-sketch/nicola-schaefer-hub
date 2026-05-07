@@ -63,6 +63,7 @@ import { BackgroundGenerator } from './panels/BackgroundGenerator';
 import { ShamanicTemplateEngine } from './panels/ShamanicTemplateEngine';
 import { VideoEditingPanel } from './panels/VideoEditingPanel';
 import { VideoStudioPanel } from './panels/VideoStudioPanel';
+import { CalendarPublishingPanel } from './panels/CalendarPublishingPanel';
 import { NavItem, BottomNavItem } from './components/SharedComponents';
 
 export default function App() {
@@ -284,7 +285,7 @@ function MainApp() {
                 {activeTab === 'ai-studio' && <ErrorBoundary><AIStudioPanel /></ErrorBoundary>}
                 {activeTab === 'studio' && <ErrorBoundary><UnifiedContentStudio /></ErrorBoundary>}
                 {activeTab === 'editor' && <ErrorBoundary><ImageEditorPanel /></ErrorBoundary>}
-                {activeTab === 'calendar' && <ErrorBoundary><CalendarPanel /></ErrorBoundary>}
+                {activeTab === 'calendar' && <ErrorBoundary><CalendarPublishingPanel /></ErrorBoundary>}
                 {activeTab === 'generator' && <ErrorBoundary><GeneratorPanel onNavigate={setActiveTab} /></ErrorBoundary>}
                 {activeTab === 'scripts' && <ErrorBoundary><ScriptsPanel /></ErrorBoundary>}
                 {activeTab === 'stories' && <ErrorBoundary><StoriesPanel /></ErrorBoundary>}
