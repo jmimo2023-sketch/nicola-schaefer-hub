@@ -18,18 +18,31 @@ const translations: Record<Language, TranslationSet> = {
 
     // Navigation
     navHome: "Inicio",
-    navStudio: "Design Studio",
+    navContent: "Crear",
+    navDesign: "Diseño",
+    navVideo: "Video",
     navCalendar: "Calendario",
+    navAnalytics: "Analítica",
+    navAssets: "Biblioteca",
+    navSettings: "Ajustes",
+    navStudio: "Design Studio",
     navGenerator: "Generador IA",
     navInstagram: "Instagram",
     navSimulator: "Simulador",
     navMethodology: "Metodología",
     navDACH: "Mercado DACH",
     navConnections: "Conexiones",
-    navAnalytics: "Analítica",
-    navContent: "Contenido",
     navStrategy: "Estrategia",
-    navSettings: "Ajustes",
+
+    // Tab titles
+    homeTitle: "Inicio",
+    contentTitle: "Content Studio",
+    designTitle: "Diseño",
+    videoTitle: "Video",
+    calendarTitle: "Calendario",
+    analyticsTitle: "Analítica",
+    assetsTitle: "Biblioteca",
+    settingsTitle: "Ajustes",
 
     // Video Editing
     videoEditBadge: "Editor de Video IA — Nicky Schaefer",
@@ -331,18 +344,31 @@ const translations: Record<Language, TranslationSet> = {
 
     // Navigation
     navHome: "Start",
-    navStudio: "Design Studio",
+    navContent: "Erstellen",
+    navDesign: "Design",
+    navVideo: "Video",
     navCalendar: "Kalender",
+    navAnalytics: "Analytik",
+    navAssets: "Bibliothek",
+    navSettings: "Einstellungen",
+    navStudio: "Design Studio",
     navGenerator: "KI-Generator",
     navInstagram: "Instagram",
     navSimulator: "Simulator",
     navMethodology: "Methodik",
     navDACH: "DACH-Markt",
     navConnections: "Verbindungen",
-    navAnalytics: "Analytik",
-    navContent: "Inhalt",
     navStrategy: "Strategie",
-    navSettings: "Einstellungen",
+
+    // Tab titles
+    homeTitle: "Start",
+    contentTitle: "Content Studio",
+    designTitle: "Design",
+    videoTitle: "Video",
+    calendarTitle: "Kalender",
+    analyticsTitle: "Analytik",
+    assetsTitle: "Bibliothek",
+    settingsTitle: "Einstellungen",
 
     // Video Editing
     videoEditBadge: "KI-Video-Editor — Nicky Schaefer",
