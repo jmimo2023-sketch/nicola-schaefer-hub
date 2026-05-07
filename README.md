@@ -95,7 +95,11 @@ npm run preview
 |---------|-------------|--------|
 | **Content Studio** | Upload, manage, and edit media assets | Stable |
 | **AI Generator** | Generate captions, scripts, and content with AI | Stable |
-| **Calendar** | Visual scheduling with drag-and-drop, hover tooltips, manual task creation, full CRUD, ICS export, Google Calendar sync, 2024-2030 support | Stable |
+| **Video Studio** | AI video editing with FFmpeg.wasm, transcription, highlight detection | Alpha |
+| **Calendar & Publishing** | Content scheduling, approval workflow, direct IG publishing via Meta API | Alpha |
+| **Analytics & Strategy** | Real Meta API metrics, growth predictions, strategy recommendations | Alpha |
+| **Design Editor** | WebP export, auto-save, Fabric.js + tldraw | Alpha |
+| **Orchestrator** | Multi-agent system with 5 AI agents, content pipeline | Alpha |
 | **Responsive Design** | Mobile-first layout, bottom navigation, touch-friendly, safe area support | Stable |
 | **Analytics Dashboard** | Instagram metrics and KPI tracking | Stable |
 | **Bilingual (ES/DE)** | Full i18n support for Spanish and German | Stable |
@@ -109,7 +113,9 @@ npm run preview
 
 | Feature | Description | ETA |
 |---------|-------------|-----|
-| Instagram Publishing | Post directly from Calendar | Week 4 |
+| Instagram Publishing | Post directly from Calendar | ✅ Done |
+| Video Studio | FFmpeg.wasm video editing, AI transcription, highlights | ✅ Done |
+| Analytics & Strategy | Real metrics, predictions, recommendations | ✅ Done |
 | Multi-account Support | Manage multiple Instagram accounts | Week 8 |
 | Team Collaboration | Share assets and scheduling with team | Week 12 |
 
