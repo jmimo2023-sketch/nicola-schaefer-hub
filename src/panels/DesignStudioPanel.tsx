@@ -1081,7 +1081,48 @@ export function DesignStudioPanel() {
   const [showFormatModal, setShowFormatModal] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Auto-save every 2 minutes when dirty
+  useEffect(() => {
+    if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current);
+    
+    autoSaveTimerRef.current = setInterval(() => {
+      if (editorRef && isDirty) {
+        handleAutoSave();
+      }
+    }, 120000); // 2 minutes
+    
+    return () => {
+      if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current);
+    };
+  }, [editorRef, isDirty]);
+
+  const handleAutoSave = async () => {
+    if (!editorRef) return;
+    setAutoSaveStatus('saving');
+    try {
+      // Save to localStorage as snapshot
+      const snapshot = editorRef.store;
+      if (snapshot) {
+        localStorage.setItem('design-studio-snapshot', JSON.stringify({
+          project: projectName,
+          format: artboardFormat,
+          timestamp: new Date().toISOString(),
+          data: snapshot
+        }));
+      }
+      setLastSaved(new Date());
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 3000);
+    } catch (err) {
+      console.error('Auto-save failed:', err);
+      setAutoSaveStatus('error');
+      setTimeout(() => setAutoSaveStatus('idle'), 5000);
+    }
+  };
 
   const handleFormatSelect = (key: FormatKey) => {
     setArtboardSize(INSTAGRAM_FORMATS[key], key);
@@ -1101,7 +1142,7 @@ export function DesignStudioPanel() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showExportMenu]);
 
-  const exportToFormat = async (format: 'svg' | 'png' | 'jpg', quality: number = 0.92) => {
+  const exportToFormat = async (format: 'svg' | 'png' | 'jpg' | 'webp', quality: number = 0.92) => {
     if (!editorRef) return;
     setIsExporting(true);
     setShowExportMenu(false);
@@ -1131,6 +1172,24 @@ export function DesignStudioPanel() {
         dataUrl = await toPng(container, { pixelRatio: 2, quality });
         mimeType = 'image/png';
         extension = 'png';
+      } else if (format === 'webp') {
+        // html-to-image doesn't have toWebP, use canvas conversion
+        const pngDataUrl = await toPng(container, { pixelRatio: 2, quality });
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = pngDataUrl; });
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          dataUrl = canvas.toDataURL('image/webp', quality);
+        } else {
+          dataUrl = pngDataUrl; // fallback to PNG
+        }
+        mimeType = 'image/webp';
+        extension = 'webp';
       } else {
         const bounds = editorRef.getCurrentPageBounds();
         const width = bounds ? bounds.width : 1080;
@@ -1365,6 +1424,16 @@ export function DesignStudioPanel() {
                     <div className="text-xs text-gray-400">Vector, scalable</div>
                   </div>
                 </button>
+                <button
+                  onClick={() => exportToFormat('webp')}
+                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                >
+                  <FileImage className="w-4 h-4 text-orange-500" />
+                  <div>
+                    <div className="font-medium text-gray-900">WebP</div>
+                    <div className="text-xs text-gray-400">Modern, small size</div>
+                  </div>
+                </button>
               </div>
             )}
           </div>
@@ -1596,6 +1665,24 @@ export function DesignStudioPanel() {
             </span>
           ) : (
             <span className="text-amber-500">Unsaved changes</span>
+          )}
+          {autoSaveStatus === 'saving' && (
+            <span className="flex items-center gap-1 text-blue-500">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Auto-saving...
+            </span>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <span className="flex items-center gap-1 text-green-500">
+              <Check className="w-3 h-3" />
+              Auto-saved
+            </span>
+          )}
+          {autoSaveStatus === 'error' && (
+            <span className="flex items-center gap-1 text-red-500">
+              <X className="w-3 h-3" />
+              Auto-save failed
+            </span>
           )}
         </div>
       </footer>
