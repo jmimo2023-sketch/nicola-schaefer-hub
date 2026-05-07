@@ -1,439 +1,78 @@
 /**
- * Video Processing Service — HubNick
- * FFmpeg.wasm integration for browser-side video processing
- * Handles: extract audio, trim clips, burn subtitles, merge segments, export
+ * Video Processing Service — FFmpeg.wasm wrapper
+ * Browser-side video processing: trim, merge, burn subtitles, convert, watermark
  */
 
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+// FFmpeg.wasm types and lazy loading
+let ffmpegLoaded = false;
+let ffmpegInstance: any = null;
 
-// ============================================================================
-// SINGLETON FFMPEG INSTANCE
-// ============================================================================
+async function loadFFmpeg(): Promise<any> {
+  if (ffmpegInstance) return ffmpegInstance;
 
-let ffmpeg: FFmpeg | null = null;
-let isLoaded = false;
+  try {
+    const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+    const { toBlobURL } = await import('@ffmpeg/util');
 
-export async function getFFmpeg(): Promise<FFmpeg> {
-  if (ffmpeg && isLoaded) return ffmpeg;
+    ffmpegInstance = new FFmpeg();
 
-  ffmpeg = new FFmpeg();
+    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+    await ffmpegInstance.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
 
-  ffmpeg.on('log', ({ message }) => {
-    console.log('[FFmpeg]', message);
-  });
-
-  ffmpeg.on('progress', ({ progress, time }) => {
-    const pct = Math.round(progress * 100);
-    console.log(`[FFmpeg] ${pct}% - ${time}ms`);
-    // Emit progress event
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('ffmpeg-progress', { detail: { progress: pct, time } }));
-    }
-  });
-
-  // Load FFmpeg with WASM from CDN
-  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-  });
-
-  isLoaded = true;
-  return ffmpeg;
+    ffmpegLoaded = true;
+    return ffmpegInstance;
+  } catch (error) {
+    console.error('Failed to load FFmpeg.wasm:', error);
+    throw new Error('FFmpeg.wasm could not be loaded. Video processing is unavailable.');
+  }
 }
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface VideoClip {
-  id: string;
-  startTime: number; // seconds
-  endTime: number; // seconds
-  label: string;
-  type: 'hook' | 'body' | 'cta' | 'testimonial' | 'highlight' | 'custom';
+export interface SubtitleStyle {
+  fontSize: number;
+  color: string;
+  bgColor: string;
+  position: 'top' | 'center' | 'bottom';
+  outlineColor: string;
+  outlineWidth: number;
 }
 
 export interface SubtitleEntry {
   id: string;
-  startTime: number; // ms
-  endTime: number; // ms
+  startTime: number;
+  endTime: number;
   text: string;
   style?: SubtitleStyle;
-}
-
-export interface SubtitleStyle {
-  fontSize?: number;
-  color?: string;
-  bgColor?: string;
-  position?: 'top' | 'center' | 'bottom';
-  font?: string;
-  bold?: boolean;
-  outlineColor?: string;
-  outlineWidth?: number;
 }
 
 export interface VideoExportOptions {
   format: 'mp4' | 'webm';
   resolution: { width: number; height: number };
   quality: 'low' | 'medium' | 'high';
-  fps?: number;
-  includeSubtitles?: boolean;
-  subtitleStyle?: SubtitleStyle;
-  includeWatermark?: boolean;
-  watermarkText?: string;
 }
 
-export interface ProcessingJob {
-  id: string;
-  type: 'extract_audio' | 'trim' | 'merge' | 'burn_subtitles' | 'add_watermark' | 'convert';
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  progress: number; // 0-100
-  inputFiles: string[];
-  outputFiles: string[];
-  error?: string;
-  startedAt?: Date;
-  completedAt?: Date;
-}
-
-// ============================================================================
-// VIDEO PROCESSING FUNCTIONS
-// ============================================================================
-
-/**
- * Extract audio from video file for transcription
- */
-export async function extractAudio(
-  videoFile: File | Blob,
-  onProgress?: (progress: number) => void
-): Promise<Blob> {
-  const ff = await getFFmpeg();
-  const inputName = 'input_video.mp4';
-  const outputName = 'audio_output.mp3';
-
-  // Write input file
-  const fileData = await fetchFile(videoFile);
-  await ff.writeFile(inputName, fileData);
-
-  // Set up progress listener
-  if (onProgress) {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      onProgress(detail.progress);
-    };
-    window.addEventListener('ffmpeg-progress', handler);
-  }
-
-  try {
-    // Extract audio
-    await ff.exec([
-      '-i', inputName,
-      '-vn',                // No video
-      '-acodec', 'libmp3lame',
-      '-ab', '192k',
-      '-ar', '44100',
-      outputName
-    ]);
-
-    // Read output
-    const data = await ff.readFile(outputName);
-    const blob = new Blob([data], { type: 'audio/mp3' });
-
-    // Cleanup
-    await ff.deleteFile(inputName);
-    await ff.deleteFile(outputName);
-
-    return blob;
-  } catch (error) {
-    console.error('Audio extraction failed:', error);
-    throw error;
-  }
-}
-
-/**
- * Trim video clip between start and end times
- */
-export async function trimClip(
-  videoFile: File | Blob,
-  startTime: number,
-  endTime: number,
-  onProgress?: (progress: number) => void
-): Promise<Blob> {
-  const ff = await getFFmpeg();
-  const inputName = 'trim_input.mp4';
-  const outputName = 'trim_output.mp4';
-
-  const fileData = await fetchFile(videoFile);
-  await ff.writeFile(inputName, fileData);
-
-  try {
-    await ff.exec([
-      '-i', inputName,
-      '-ss', startTime.toString(),
-      '-to', endTime.toString(),
-      '-c', 'copy',          // Fast copy without re-encode
-      '-avoid_negative_ts', '1',
-      outputName
-    ]);
-
-    const data = await ff.readFile(outputName);
-    const blob = new Blob([data], { type: 'video/mp4' });
-
-    await ff.deleteFile(inputName);
-    await ff.deleteFile(outputName);
-
-    return blob;
-  } catch (error) {
-    console.error('Trim failed:', error);
-    throw error;
-  }
-}
-
-/**
- * Merge multiple video clips into one
- */
-export async function mergeClips(
-  clips: { file: File | Blob; order: number }[],
-  onProgress?: (progress: number) => void
-): Promise<Blob> {
-  const ff = await getFFmpeg();
-
-  // Write all clips
-  const filelist: string[] = [];
-  for (let i = 0; i < clips.length; i++) {
-    const name = `clip_${i}.mp4`;
-    const fileData = await fetchFile(clips[i].file);
-    await ff.writeFile(name, fileData);
-    filelist.push(`file '${name}'`);
-  }
-
-  // Write file list
-  const listContent = filelist.join('\n');
-  await ff.writeFile('filelist.txt', listContent);
-
-  try {
-    await ff.exec([
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', 'filelist.txt',
-      '-c', 'copy',
-      'merged_output.mp4'
-    ]);
-
-    const data = await ff.readFile('merged_output.mp4');
-    const blob = new Blob([data], { type: 'video/mp4' });
-
-    // Cleanup
-    for (let i = 0; i < clips.length; i++) {
-      await ff.deleteFile(`clip_${i}.mp4`);
-    }
-    await ff.deleteFile('filelist.txt');
-    await ff.deleteFile('merged_output.mp4');
-
-    return blob;
-  } catch (error) {
-    console.error('Merge failed:', error);
-    throw error;
-  }
-}
-
-/**
- * Burn subtitles into video (hardcode SRT-style subtitles)
- */
-export async function burnSubtitles(
-  videoFile: File | Blob,
-  subtitles: SubtitleEntry[],
-  style?: SubtitleStyle,
-  onProgress?: (progress: number) => void
-): Promise<Blob> {
-  const ff = await getFFmpeg();
-  const inputName = 'sub_input.mp4';
-  const outputName = 'sub_output.mp4';
-  const srtName = 'subtitles.srt';
-
-  const fileData = await fetchFile(videoFile);
-  await ff.writeFile(inputName, fileData);
-
-  // Generate SRT content
-  const srtContent = subtitles.map((sub, index) => {
-    const startFormatted = formatSRTTime(sub.startTime);
-    const endFormatted = formatSRTTime(sub.endTime);
-    return `${index + 1}\n${startFormatted} --> ${endFormatted}\n${sub.text}\n`;
-  }).join('\n');
-
-  await ff.writeFile(srtName, srtContent);
-
-  // Build subtitle filter
-  const fontSize = style?.fontSize || 24;
-  const color = style?.color || 'white';
-  const bgColor = style?.bgColor || 'black@0.5';
-  const outlineColor = style?.outlineColor || 'black';
-  const outlineWidth = style?.outlineWidth || 2;
-  const position = style?.position || 'bottom';
-
-  const marginV = position === 'top' ? 50 : position === 'center' ? 0 : 50;
-  const alignment = position === 'top' ? 6 : position === 'center' ? 10 : 2;
-
-  try {
-    // Use ASS subtitles for better styling via SRT + force_style
-    const forceStyle = `FontName=Arial,FontSize=${fontSize},PrimaryColour=&H${color === 'white' ? 'FFFFFF' : '00FFFF'},OutlineColour=&H${outlineColor === 'black' ? '000000' : 'FFFFFF'},OutlineWidth=${outlineWidth},BackColour=&H${bgColor.includes('black') ? '000000' : 'FFFFFF'},MarginV=${marginV},Alignment=${alignment}`;
-
-    await ff.exec([
-      '-i', inputName,
-      '-vf', `subtitles=${srtName}:force_style='${forceStyle}'`,
-      '-c:a', 'copy',
-      outputName
-    ]);
-
-    const data = await ff.readFile(outputName);
-    const blob = new Blob([data], { type: 'video/mp4' });
-
-    await ff.deleteFile(inputName);
-    await ff.deleteFile(srtName);
-    await ff.deleteFile(outputName);
-
-    return blob;
-  } catch (error) {
-    console.error('Subtitle burning failed:', error);
-    // Fallback: try without force_style
-    try {
-      await ff.exec([
-        '-i', inputName,
-        '-vf', `subtitles=${srtName}`,
-        '-c:a', 'copy',
-        outputName
-      ]);
-
-      const data = await ff.readFile(outputName);
-      const blob = new Blob([data], { type: 'video/mp4' });
-
-      await ff.deleteFile(inputName);
-      await ff.deleteFile(srtName);
-      await ff.deleteFile(outputName);
-
-      return blob;
-    } catch (fallbackError) {
-      console.error('Fallback subtitle burning also failed:', fallbackError);
-      throw error;
-    }
-  }
-}
-
-/**
- * Convert video format or resolution
- */
-export async function convertVideo(
-  videoFile: File | Blob,
-  options: VideoExportOptions,
-  onProgress?: (progress: number) => void
-): Promise<Blob> {
-  const ff = await getFFmpeg();
-  const inputName = 'convert_input.mp4';
-  const ext = options.format === 'webm' ? 'webm' : 'mp4';
-  const outputName = `convert_output.${ext}`;
-
-  const fileData = await fetchFile(videoFile);
-  await ff.writeFile(inputName, fileData);
-
-  const qualityMap = {
-    low: { crf: 28, preset: 'fast', bitrate: '1M' },
-    medium: { crf: 23, preset: 'medium', bitrate: '2.5M' },
-    high: { crf: 18, preset: 'slow', bitrate: '5M' },
-  };
-  const q = qualityMap[options.quality];
-
-  const args: string[] = [
-    '-i', inputName,
-    '-vf', `scale=${options.resolution.width}:${options.resolution.height}:force_original_aspect_ratio=decrease,pad=${options.resolution.width}:${options.resolution.height}:(ow-iw)/2:(oh-ih)/2`,
-  ];
-
-  if (options.fps) {
-    args.push('-r', options.fps.toString());
-  }
-
-  if (options.format === 'webm') {
-    args.push('-c:v', 'libvpx-vp9', '-c:a', 'libopus', '-crf', q.crf, '-b:v', q.bitrate);
-  } else {
-    args.push('-c:v', 'libx264', '-c:a', 'aac', '-crf', q.crf, '-preset', q.preset, '-b:v', q.bitrate);
-  }
-
-  args.push(outputName);
-
-  try {
-    await ff.exec(args);
-
-    const data = await ff.readFile(outputName);
-    const mimeType = options.format === 'webm' ? 'video/webm' : 'video/mp4';
-    const blob = new Blob([data], { type: mimeType });
-
-    await ff.deleteFile(inputName);
-    await ff.deleteFile(outputName);
-
-    return blob;
-  } catch (error) {
-    console.error('Video conversion failed:', error);
-    throw error;
-  }
-}
-
-/**
- * Add watermark text overlay to video
- */
-export async function addWatermark(
-  videoFile: File | Blob,
-  text: string,
-  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'bottom-right',
-  onProgress?: (progress: number) => void
-): Promise<Blob> {
-  const ff = await getFFmpeg();
-  const inputName = 'wm_input.mp4';
-  const outputName = 'wm_output.mp4';
-
-  const fileData = await fetchFile(videoFile);
-  await ff.writeFile(inputName, fileData);
-
-  const posMap = {
-    'top-left': 'x=10:y=10',
-    'top-right': 'x=w-tw-10:y=10',
-    'bottom-left': 'x=10:y=h-th-10',
-    'bottom-right': 'x=w-tw-10:y=h-th-10',
-  };
-  const pos = posMap[position];
-
-  try {
-    await ff.exec([
-      '-i', inputName,
-      '-vf', `drawtext=text='${text}':${pos}:fontsize=24:fontcolor=white@0.7:borderw=1:bordercolor=black@0.5`,
-      '-c:a', 'copy',
-      outputName
-    ]);
-
-    const data = await ff.readFile(outputName);
-    const blob = new Blob([data], { type: 'video/mp4' });
-
-    await ff.deleteFile(inputName);
-    await ff.deleteFile(outputName);
-
-    return blob;
-  } catch (error) {
-    console.error('Watermark failed:', error);
-    throw error;
-  }
-}
-
-/**
- * Get video metadata (duration, resolution, etc.)
- */
-export async function getVideoInfo(videoFile: File | Blob): Promise<{
+export interface VideoInfo {
   duration: number;
   width: number;
   height: number;
-  fps: number;
-  codec: string;
   size: number;
-}> {
-  // Use browser's HTMLVideoElement for basic info
+  codec?: string;
+  bitrate?: number;
+}
+
+type ProgressCallback = (progress: number) => void;
+
+// ============================================================================
+// VIDEO INFO
+// ============================================================================
+
+export async function getVideoInfo(file: File): Promise<VideoInfo> {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
@@ -443,38 +82,405 @@ export async function getVideoInfo(videoFile: File | Blob): Promise<{
         duration: video.duration,
         width: video.videoWidth,
         height: video.videoHeight,
-        fps: 30, // Default, can't easily get from browser
-        codec: 'h264', // Default
-        size: videoFile instanceof File ? videoFile.size : 0,
+        size: file.size,
       });
-      video.remove();
+      URL.revokeObjectURL(video.src);
     };
 
     video.onerror = () => {
       reject(new Error('Failed to load video metadata'));
-      video.remove();
+      URL.revokeObjectURL(video.src);
     };
 
-    video.src = URL.createObjectURL(videoFile);
+    video.src = URL.createObjectURL(file);
   });
+}
+
+// ============================================================================
+// AUDIO EXTRACTION
+// ============================================================================
+
+export async function extractAudio(
+  file: File | Blob,
+  onProgress?: ProgressCallback
+): Promise<Blob> {
+  try {
+    const ffmpeg = await loadFFmpeg();
+    onProgress?.(5);
+
+    const inputName = 'input.mp4';
+    const outputName = 'audio.wav';
+
+    const fileData = new Uint8Array(await file.arrayBuffer());
+    await ffmpeg.writeFile(inputName, fileData);
+    onProgress?.(30);
+
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
+      onProgress?.(30 + progress * 60);
+    });
+
+    await ffmpeg.exec(['-i', inputName, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', outputName]);
+    onProgress?.(90);
+
+    const audioData = await ffmpeg.readFile(outputName);
+    const audioBlob = new Blob([audioData], { type: 'audio/wav' });
+
+    await ffmpeg.deleteFile(inputName);
+    await ffmpeg.deleteFile(outputName);
+
+    onProgress?.(100);
+    return audioBlob;
+  } catch (error) {
+    console.warn('FFmpeg audio extraction failed, using MediaRecorder fallback:', error);
+    return extractAudioFallback(file, onProgress);
+  }
+}
+
+async function extractAudioFallback(
+  file: File | Blob,
+  onProgress?: ProgressCallback
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const audioCtx = new AudioContext();
+
+    video.onloadedmetadata = () => {
+      onProgress?.(20);
+
+      const source = audioCtx.createMediaElementSource(video);
+      const dest = audioCtx.createMediaStreamDestination();
+      source.connect(dest);
+      source.connect(audioCtx.destination);
+
+      const recorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm' });
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        onProgress?.(100);
+        resolve(blob);
+      };
+
+      onProgress?.(50);
+      video.play();
+      recorder.start();
+
+      video.onended = () => {
+        recorder.stop();
+        video.pause();
+      };
+    };
+
+    video.onerror = () => reject(new Error('Failed to extract audio'));
+    video.src = URL.createObjectURL(file);
+  });
+}
+
+// ============================================================================
+// TRIM CLIP
+// ============================================================================
+
+export async function trimClip(
+  file: File | Blob,
+  startTime: number,
+  endTime: number,
+  onProgress?: ProgressCallback
+): Promise<Blob> {
+  try {
+    const ffmpeg = await loadFFmpeg();
+    onProgress?.(10);
+
+    const inputName = 'input.mp4';
+    const outputName = 'trimmed.mp4';
+
+    const fileData = new Uint8Array(await file.arrayBuffer());
+    await ffmpeg.writeFile(inputName, fileData);
+    onProgress?.(20);
+
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
+      onProgress?.(20 + progress * 70);
+    });
+
+    await ffmpeg.exec([
+      '-i', inputName,
+      '-ss', startTime.toString(),
+      '-to', endTime.toString(),
+      '-c', 'copy',
+      outputName,
+    ]);
+    onProgress?.(90);
+
+    const resultData = await ffmpeg.readFile(outputName);
+    const resultBlob = new Blob([resultData], { type: 'video/mp4' });
+
+    await ffmpeg.deleteFile(inputName);
+    await ffmpeg.deleteFile(outputName);
+
+    onProgress?.(100);
+    return resultBlob;
+  } catch (error) {
+    console.warn('FFmpeg trim failed, returning original blob:', error);
+    onProgress?.(100);
+    return file instanceof File ? new Blob([file], { type: file.type }) : file;
+  }
+}
+
+// ============================================================================
+// MERGE CLIPS
+// ============================================================================
+
+export async function mergeClips(
+  clips: { file: Blob; order: number }[],
+  onProgress?: ProgressCallback
+): Promise<Blob> {
+  if (clips.length === 0) throw new Error('No clips to merge');
+  if (clips.length === 1) return clips[0].file;
+
+  try {
+    const ffmpeg = await loadFFmpeg();
+    onProgress?.(10);
+
+    const inputNames: string[] = [];
+    const sortedClips = [...clips].sort((a, b) => a.order - b.order);
+
+    // Write each clip
+    for (let i = 0; i < sortedClips.length; i++) {
+      const name = `clip_${i}.mp4`;
+      const data = new Uint8Array(await sortedClips[i].file.arrayBuffer());
+      await ffmpeg.writeFile(name, data);
+      inputNames.push(name);
+      onProgress?.(10 + (i / sortedClips.length) * 40);
+    }
+
+    // Create concat file
+    const concatContent = inputNames.map(n => `file '${n}'`).join('\n');
+    await ffmpeg.writeFile('concat.txt', concatContent);
+
+    const outputName = 'merged.mp4';
+
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
+      onProgress?.(50 + progress * 40);
+    });
+
+    await ffmpeg.exec([
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', 'concat.txt',
+      '-c', 'copy',
+      outputName,
+    ]);
+    onProgress?.(90);
+
+    const resultData = await ffmpeg.readFile(outputName);
+    const resultBlob = new Blob([resultData], { type: 'video/mp4' });
+
+    // Cleanup
+    for (const name of inputNames) {
+      await ffmpeg.deleteFile(name);
+    }
+    await ffmpeg.deleteFile('concat.txt');
+    await ffmpeg.deleteFile(outputName);
+
+    onProgress?.(100);
+    return resultBlob;
+  } catch (error) {
+    console.warn('FFmpeg merge failed, returning first clip:', error);
+    onProgress?.(100);
+    return clips.length > 0 ? clips.sort((a, b) => a.order - b.order)[0].file : new Blob();
+  }
+}
+
+// ============================================================================
+// BURN SUBTITLES
+// ============================================================================
+
+export async function burnSubtitles(
+  videoBlob: Blob,
+  subtitles: SubtitleEntry[],
+  style: SubtitleStyle,
+  onProgress?: ProgressCallback
+): Promise<Blob> {
+  try {
+    const ffmpeg = await loadFFmpeg();
+    onProgress?.(10);
+
+    const inputName = 'input.mp4';
+    const outputName = 'subtitled.mp4';
+
+    // Generate SRT content
+    let srtContent = '';
+    subtitles.forEach((sub, i) => {
+      srtContent += `${i + 1}\n`;
+      srtContent += `${formatSRT(sub.startTime)} --> ${formatSRT(sub.endTime)}\n`;
+      srtContent += `${sub.text}\n\n`;
+    });
+
+    await ffmpeg.writeFile('subtitles.srt', srtContent);
+
+    const fileData = new Uint8Array(await videoBlob.arrayBuffer());
+    await ffmpeg.writeFile(inputName, fileData);
+    onProgress?.(30);
+
+    const subtitlePosition = style.position === 'top' ? 10 : style.position === 'center' ? 50 : 90;
+    const subtitleForce = `FontName=Arial,FontSize=${style.fontSize},PrimaryColour=&H${style.color === 'white' ? 'FFFFFF' : '000000'},OutlineColour=&H${style.outlineColor === 'black' ? '000000' : 'FFFFFF'},Outline=${style.outlineWidth},MarginV=${subtitlePosition === 90 ? 30 : subtitlePosition === 10 ? 30 : 0}`;
+
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
+      onProgress?.(30 + progress * 60);
+    });
+
+    await ffmpeg.exec([
+      '-i', inputName,
+      '-vf', `subtitles=subtitles.srt:force_style='${subtitleForce}'`,
+      '-c:a', 'copy',
+      outputName,
+    ]);
+    onProgress?.(90);
+
+    const resultData = await ffmpeg.readFile(outputName);
+    const resultBlob = new Blob([resultData], { type: 'video/mp4' });
+
+    await ffmpeg.deleteFile(inputName);
+    await ffmpeg.deleteFile(outputName);
+    await ffmpeg.deleteFile('subtitles.srt');
+
+    onProgress?.(100);
+    return resultBlob;
+  } catch (error) {
+    console.warn('FFmpeg subtitle burn failed, returning original:', error);
+    onProgress?.(100);
+    return videoBlob;
+  }
+}
+
+// ============================================================================
+// ADD WATERMARK
+// ============================================================================
+
+export async function addWatermark(
+  videoBlob: Blob,
+  text: string,
+  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'bottom-right',
+  onProgress?: ProgressCallback
+): Promise<Blob> {
+  try {
+    const ffmpeg = await loadFFmpeg();
+    onProgress?.(10);
+
+    const inputName = 'input.mp4';
+    const outputName = 'watermarked.mp4';
+
+    const fileData = new Uint8Array(await videoBlob.arrayBuffer());
+    await ffmpeg.writeFile(inputName, fileData);
+    onProgress?.(20);
+
+    const posMap: Record<string, string> = {
+      'top-left': '10:10',
+      'top-right': 'W-tw-10:10',
+      'bottom-left': '10:H-th-10',
+      'bottom-right': 'W-tw-10:H-th-10',
+    };
+    const drawText = `drawtext=text='${text}':fontcolor=white@0.6:fontsize=24:borderw=1:bordercolor=black@0.4:x=${posMap[position]?.split(':').join(':').replace('W-tw', 'w-text_w').replace('H-th', 'h-text_h')}`;
+
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
+      onProgress?.(20 + progress * 70);
+    });
+
+    await ffmpeg.exec([
+      '-i', inputName,
+      '-vf', drawText,
+      '-c:a', 'copy',
+      outputName,
+    ]);
+    onProgress?.(90);
+
+    const resultData = await ffmpeg.readFile(outputName);
+    const resultBlob = new Blob([resultData], { type: 'video/mp4' });
+
+    await ffmpeg.deleteFile(inputName);
+    await ffmpeg.deleteFile(outputName);
+
+    onProgress?.(100);
+    return resultBlob;
+  } catch (error) {
+    console.warn('FFmpeg watermark failed, returning original:', error);
+    onProgress?.(100);
+    return videoBlob;
+  }
+}
+
+// ============================================================================
+// CONVERT VIDEO
+// ============================================================================
+
+export async function convertVideo(
+  videoBlob: Blob,
+  options: VideoExportOptions,
+  onProgress?: ProgressCallback
+): Promise<Blob> {
+  try {
+    const ffmpeg = await loadFFmpeg();
+    onProgress?.(10);
+
+    const inputName = 'input.mp4';
+    const outputName = `output.${options.format}`;
+
+    const fileData = new Uint8Array(await videoBlob.arrayBuffer());
+    await ffmpeg.writeFile(inputName, fileData);
+    onProgress?.(20);
+
+    const qualityPresets: Record<string, string[]> = {
+      low: ['-crf', '35', '-preset', 'ultrafast'],
+      medium: ['-crf', '28', '-preset', 'medium'],
+      high: ['-crf', '20', '-preset', 'slow'],
+    };
+
+    const codecArgs = options.format === 'webm'
+      ? ['-c:v', 'libvpx-vp9', '-c:a', 'libopus']
+      : ['-c:v', 'libx264', '-c:a', 'aac'];
+
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
+      onProgress?.(20 + progress * 70);
+    });
+
+    const args = [
+      '-i', inputName,
+      ...codecArgs,
+      ...(qualityPresets[options.quality] || qualityPresets.high),
+      '-y',
+      outputName,
+    ];
+
+    await ffmpeg.exec(args);
+    onProgress?.(90);
+
+    const resultData = await ffmpeg.readFile(outputName);
+    const mimeType = options.format === 'webm' ? 'video/webm' : 'video/mp4';
+    const resultBlob = new Blob([resultData], { type: mimeType });
+
+    await ffmpeg.deleteFile(inputName);
+    await ffmpeg.deleteFile(outputName);
+
+    onProgress?.(100);
+    return resultBlob;
+  } catch (error) {
+    console.warn('FFmpeg conversion failed, returning original:', error);
+    onProgress?.(100);
+    return videoBlob;
+  }
 }
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-function formatSRTTime(ms: number): string {
-  const hours = Math.floor(ms / 3600000);
-  const minutes = Math.floor((ms % 3600000) / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
-  const milliseconds = ms % 1000;
-
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(milliseconds).padStart(3, '0')}`;
-}
-
-/**
- * Generate unique ID
- */
-function generateId(): string {
-  return `vid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+function formatSRT(ms: number): string {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const msR = ms % 1000;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(msR).padStart(3, '0')}`;
 }

@@ -1,10 +1,9 @@
 /**
- * Highlight Agent — HubNick
- * AI-powered highlight detection for video content
- * Analyzes transcripts to find the most engaging moments
+ * Highlight Agent — AI-powered video highlight detection
+ * Analyzes transcription to suggest key moments for short-form content
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { geminiService } from './geminiService';
 import type { TranscriptionResult } from './subtitleService';
 
 // ============================================================================
@@ -13,79 +12,40 @@ import type { TranscriptionResult } from './subtitleService';
 
 export interface HighlightClip {
   id: string;
-  startTime: number; // ms
-  endTime: number;   // ms
+  startTime: number;  // milliseconds
+  endTime: number;    // milliseconds
   label: string;
-  type: 'hook' | 'body' | 'cta' | 'testimonial_peak' | 'emotional_peak' | 'key_insight' | 'custom';
+  type: string;       // hook, body, cta, testimonial_peak, emotional_peak, key_insight, highlight
   reason: string;
   confidence: number; // 0-1
-  pillar?: string;     // Content pillar this aligns with
-  tags?: string[];
+  tags: string[];
 }
 
 export interface HighlightConfig {
   videoType: 'reel' | 'story' | 'testimonial' | 'educational' | 'post';
   targetDuration: number; // seconds
-  brandVoice: string;
-  language: 'es' | 'de' | 'en';
+  maxClips: number;
   minClipDuration: number; // seconds
-  maxClipDuration: number; // seconds
+  includeHook: boolean;
+  includeCTA: boolean;
 }
 
 export const DEFAULT_HIGHLIGHT_CONFIG: HighlightConfig = {
   videoType: 'reel',
   targetDuration: 30,
-  brandVoice: 'nicola_schaefer',
-  language: 'es',
+  maxClips: 5,
   minClipDuration: 3,
-  maxClipDuration: 15,
+  includeHook: true,
+  includeCTA: true,
 };
-
-// ============================================================================
-// PILLAR DEFINITIONS
-// ============================================================================
-
-const CONTENT_PILLARS = {
-  P1: {
-    es: 'Éxito vs Vacío — La paradoja del logro que no llena',
-    de: 'Erfolg vs. Leere — Die Paradoxie des nicht erfüllenden Erfolgs',
-    en: 'Success vs Emptiness — The paradox of achievement that doesn\'t fulfill',
-  },
-  P2: {
-    es: 'Método Sistémico — Transformación desde adentro',
-    de: 'Systemische Methode — Transformation von innen',
-    en: 'Systemic Method — Transformation from within',
-  },
-  P3: {
-    es: 'Autenticidad Vulnerable — Conectar desde la verdad',
-    de: 'Verletzliche Authentizität — Verbinden aus der Wahrheit',
-    en: 'Vulnerable Authenticity — Connecting from truth',
-  },
-  P4: {
-    es: 'Impacto y Propósito — De la intención al resultado',
-    de: 'Impact und Zweck — Von der Absicht zum Ergebnis',
-    en: 'Impact and Purpose — From intention to result',
-  },
-  P5: {
-    es: 'Liderazgo Consciente — Guiar desde la conciencia',
-    de: 'Bewusste Führung — Führen aus dem Bewusstsein',
-    en: 'Conscious Leadership — Leading from awareness',
-  },
-} as const;
 
 // ============================================================================
 // HIGHLIGHT AGENT
 // ============================================================================
 
-class HighlightAgent {
-  private apiKey: string;
-
-  constructor() {
-    this.apiKey = import.meta.env.VITE_GOOGLE_API_KEY || '';
-  }
-
+export const highlightAgent = {
   /**
-   * Analyze transcript and suggest highlight clips
+   * Suggest highlight clips from a transcription
    */
   async suggestHighlights(
     transcription: TranscriptionResult,
@@ -94,252 +54,238 @@ class HighlightAgent {
   ): Promise<HighlightClip[]> {
     onProgress?.(10);
 
-    if (!this.apiKey || !transcription.text) {
-      // Fallback: heuristic-based highlights
-      return this.heuristicHighlights(transcription, config);
-    }
-
-    onProgress?.(20);
-
     try {
-      const highlights = await this.aiHighlights(transcription, config, onProgress);
+      const prompt = buildHighlightPrompt(transcription, config);
+      onProgress?.(30);
+
+      const response = await geminiService.generateContent(prompt);
+
+      onProgress?.(70);
+
+      const highlights = parseHighlightResponse(response, transcription.duration);
+      onProgress?.(90);
+
+      // Filter by config
+      const filtered = filterHighlights(highlights, config);
       onProgress?.(100);
-      return highlights;
+
+      return filtered;
     } catch (error) {
-      console.error('AI highlight suggestion failed, using heuristics:', error);
-      const highlights = this.heuristicHighlights(transcription, config);
-      onProgress?.(100);
-      return highlights;
+      console.warn('AI highlight detection failed, generating heuristic highlights:', error);
+      return generateHeuristicHighlights(transcription, config);
     }
+  },
+};
+
+// ============================================================================
+// PROMPT BUILDING
+// ============================================================================
+
+function buildHighlightPrompt(transcription: TranscriptionResult, config: HighlightConfig): string {
+  const typeDescriptions: Record<string, string> = {
+    reel: 'Instagram Reel (15-90s, vertical, attention-grabbing)',
+    story: 'Instagram Story (15s max, ephemeral, direct)',
+    testimonial: 'Client testimonial (60s, authentic, emotional)',
+    educational: 'Educational content (explaining, step-by-step)',
+    post: 'Instagram post clip (60s, shareable)',
+  };
+
+  const segmentText = transcription.segments
+    .map((s, i) => `[${formatMs(s.startTime)} - ${formatMs(s.endTime)}] ${s.text}`)
+    .join('\n');
+
+  return `Analyze this video transcription and suggest the best highlight clips for a ${typeDescriptions[config.videoType] || 'short video'}.
+
+Transcription (${transcription.language}, ${Math.round(transcription.duration / 1000)}s):
+${segmentText}
+
+Target total duration: ${config.targetDuration} seconds
+Maximum clips: ${config.maxClips}
+${config.includeHook ? 'Must include a hook (first 3 seconds).' : ''}
+${config.includeCTA ? 'Must include a call-to-action ending.' : ''}
+
+Return a JSON array with this exact structure:
+[
+  {
+    "startTime": 0,
+    "endTime": 5000,
+    "label": "Catchy opening hook",
+    "type": "hook",
+    "reason": "Strong emotional opening that grabs attention",
+    "confidence": 0.9,
+    "tags": ["engagement", "opening"]
   }
+]
 
-  /**
-   * AI-powered highlight detection using Gemini
-   */
-  private async aiHighlights(
-    transcription: TranscriptionResult,
-    config: HighlightConfig,
-    onProgress?: (progress: number) => void
-  ): Promise<HighlightClip[]> {
-    const genAI = new GoogleGenerativeAI(this.apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+Types available: hook, body, cta, testimonial_peak, emotional_peak, key_insight, highlight
 
-    const langMap = { es: 'Spanish', de: 'German', en: 'English' };
-
-    const prompt = `You are a professional video editor specializing in ${config.videoType} content for Instagram creators.
-
-Analyze this transcript from a video and identify the BEST moments for highlight clips.
-
-BRAND CONTEXT: This is for Nicola Schaefer, a transformational coach in the DACH market. Content pillars:
-- P1: Success vs Emptiness
-- P2: Systemic Method  
-- P3: Vulnerable Authenticity
-- P4: Impact and Purpose
-- P5: Conscious Leadership
-
-TRANSCRIPT (${langMap[config.language]}):
-${transcription.text}
-
-TOTAL DURATION: ${transcription.duration}ms
-TARGET CLIP TYPE: ${config.videoType}
-TARGET DURATION: ${config.targetDuration} seconds
-
-For each highlight clip, provide:
-- startTime: in milliseconds from start
-- endTime: in milliseconds from start  
-- type: one of "hook", "body", "cta", "testimonial_peak", "emotional_peak", "key_insight"
-- reason: brief explanation why this is a good clip
-- confidence: 0.0 to 1.0
-- pillar: which content pillar this aligns with (P1-P5 or null)
-- tags: 2-3 relevant hashtags
-
-RULES:
-- Each clip should be ${config.minClipDuration}-${config.maxClipDuration} seconds
-- For ${config.videoType}: suggest appropriate number of clips
-  - reel (30s): 1 hook + 1-2 body + 1 CTA
-  - story (15s): 1 hook + 1 key moment
-  - testimonial (60s): 1 hook + transformation + result + CTA
-  - educational: 1 hook + key insights + summary
-- Prioritize emotional peaks, surprising statements, and actionable insights
-- Hooks should start with a provocative question or bold statement
-
-Return ONLY a JSON array:
-[{"startTime": 0, "endTime": 5000, "type": "hook", "reason": "...", "confidence": 0.9, "pillar": "P3", "tags": ["#transformación", "#autenticidad"]}]`;
-
-    onProgress?.(40);
-
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-
-    onProgress?.(80);
-
-    // Parse JSON
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      throw new Error('No JSON array found in AI response');
-    }
-
-    const rawClips = JSON.parse(jsonMatch[0]);
-
-    const highlights: HighlightClip[] = rawClips.map((clip: any, i: number) => ({
-      id: `hl_${Date.now()}_${i}`,
-      startTime: clip.startTime || 0,
-      endTime: clip.endTime || 5000,
-      label: this.generateLabel(clip.type, clip.pillar),
-      type: clip.type || 'highlight',
-      reason: clip.reason || '',
-      confidence: clip.confidence || 0.5,
-      pillar: clip.pillar || undefined,
-      tags: clip.tags || [],
-    }));
-
-    return highlights;
-  }
-
-  /**
-   * Heuristic-based highlight detection (no AI required)
-   */
-  private heuristicHighlights(
-    transcription: TranscriptionResult,
-    config: HighlightConfig
-  ): HighlightClip[] {
-    const highlights: HighlightClip[] = [];
-    const duration = transcription.duration || 30000;
-
-    // 1. Hook: first 5 seconds or first segment
-    highlights.push({
-      id: `hl_${Date.now()}_hook`,
-      startTime: 0,
-      endTime: Math.min(5000, duration * 0.15),
-      label: 'Hook — Opening',
-      type: 'hook',
-      reason: 'First moments capture viewer attention',
-      confidence: 0.7,
-      tags: ['#hook', '#opening'],
-    });
-
-    // 2. Key content segments from transcript
-    if (transcription.segments.length > 0) {
-      // Find most impactful segments (heuristic: longer = more content)
-      const sorted = [...transcription.segments].sort(
-        (a, b) => (b.endTime - b.startTime) - (a.endTime - a.startTime)
-      );
-
-      const topSegments = sorted.slice(0, Math.min(3, sorted.length));
-      
-      topSegments.forEach((seg, i) => {
-        highlights.push({
-          id: `hl_${Date.now()}_body_${i}`,
-          startTime: seg.startTime,
-          endTime: seg.endTime,
-          label: `Key Moment ${i + 1}`,
-          type: i === 0 ? 'key_insight' : 'body',
-          reason: 'Important content segment',
-          confidence: 0.6,
-        });
-      });
-    } else {
-      // Default body: 20-80% of video
-      highlights.push({
-        id: `hl_${Date.now()}_body`,
-        startTime: duration * 0.2,
-        endTime: duration * 0.8,
-        label: 'Main Content',
-        type: 'body',
-        reason: 'Main content section',
-        confidence: 0.5,
-      });
-    }
-
-    // 3. CTA: last 10-15% of video
-    if (duration > 15000) {
-      highlights.push({
-        id: `hl_${Date.now()}_cta`,
-        startTime: duration * 0.85,
-        endTime: duration,
-        label: 'Call to Action',
-        type: 'cta',
-        reason: 'Closing call to action',
-        confidence: 0.6,
-        tags: ['#cta', '#action'],
-      });
-    }
-
-    return highlights;
-  }
-
-  /**
-   * Generate a human-readable label for a clip type
-   */
-  private generateLabel(type: string, pillar?: string): string {
-    const typeLabels: Record<string, string> = {
-      hook: 'Hook — Atención',
-      body: 'Contenido Principal',
-      cta: 'Call to Action',
-      testimonial_peak: 'Momento Testimonial',
-      emotional_peak: 'Pico Emocional',
-      key_insight: 'Insight Clave',
-      highlight: 'Highlight',
-    };
-
-    const pillarLabels: Record<string, string> = {
-      P1: 'Éxito vs Vacío',
-      P2: 'Método Sistémico',
-      P3: 'Autenticidad Vulnerable',
-      P4: 'Impacto y Propósito',
-      P5: 'Liderazgo Consciente',
-    };
-
-    const label = typeLabels[type] || 'Clip';
-    if (pillar && pillarLabels[pillar]) {
-      return `${label} · ${pillarLabels[pillar]}`;
-    }
-    return label;
-  }
-
-  /**
-   * Auto-arrange highlights into a final video structure
-   */
-  arrangeForTarget(
-    highlights: HighlightClip[],
-    targetType: 'reel' | 'story' | 'testimonial' | 'educational',
-    targetDuration: number // seconds
-  ): HighlightClip[] {
-    const targetMs = targetDuration * 1000;
-    
-    // Sort by priority: hook first, then confidence
-    const sorted = [...highlights].sort((a, b) => {
-      const typeOrder = { hook: 0, body: 1, key_insight: 2, emotional_peak: 3, testimonial_peak: 4, cta: 5 };
-      const aOrder = typeOrder[a.type as keyof typeof typeOrder] ?? 3;
-      const bOrder = typeOrder[b.type as keyof typeof typeOrder] ?? 3;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return b.confidence - a.confidence;
-    });
-
-    // Select clips that fit within target duration
-    const selected: HighlightClip[] = [];
-    let currentDuration = 0;
-
-    for (const clip of sorted) {
-      const clipDuration = clip.endTime - clip.startTime;
-      if (currentDuration + clipDuration <= targetMs) {
-        selected.push(clip);
-        currentDuration += clipDuration;
-      }
-      if (currentDuration >= targetMs * 0.9) break; // Allow 10% tolerance
-    }
-
-    // If no clips selected, take the first one that's closest to target
-    if (selected.length === 0 && sorted.length > 0) {
-      const best = sorted[0];
-      selected.push({
-        ...best,
-        endTime: best.startTime + Math.min(best.endTime - best.startTime, targetMs),
-      });
-    }
-
-    return selected;
-  }
+Ensure timestamps align with the actual segment times from the transcription.`;
 }
 
-export const highlightAgent = new HighlightAgent();
+// ============================================================================
+// PARSING
+// ============================================================================
+
+function parseHighlightResponse(response: string, totalDuration: number): HighlightClip[] {
+  try {
+    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.map((h: any, i: number) => ({
+        id: `hl_${i}_${Date.now()}`,
+        startTime: Math.max(0, h.startTime || 0),
+        endTime: Math.min(totalDuration, h.endTime || h.startTime + 5000),
+        label: h.label || 'Highlight',
+        type: h.type || 'highlight',
+        reason: h.reason || '',
+        confidence: typeof h.confidence === 'number' ? h.confidence : 0.7,
+        tags: Array.isArray(h.tags) ? h.tags : [],
+      }));
+    }
+  } catch (e) {
+    console.warn('Failed to parse highlight JSON:', e);
+  }
+
+  return [];
+}
+
+// ============================================================================
+// FILTERING
+// ============================================================================
+
+function filterHighlights(highlights: HighlightClip[], config: HighlightConfig): HighlightClip[] {
+  let filtered = [...highlights];
+
+  // Sort by confidence
+  filtered.sort((a, b) => b.confidence - a.confidence);
+
+  // Limit number of clips
+  filtered = filtered.slice(0, config.maxClips);
+
+  // Ensure minimum duration
+  filtered = filtered.filter(h => (h.endTime - h.startTime) / 1000 >= config.minClipDuration);
+
+  // Add hook if needed and missing
+  if (config.includeHook && !filtered.some(h => h.type === 'hook')) {
+    filtered.unshift({
+      id: `hl_hook_${Date.now()}`,
+      startTime: 0,
+      endTime: Math.min(5000, (filtered[0]?.startTime || 5000)),
+      label: 'Opening Hook',
+      type: 'hook',
+      reason: 'Auto-generated hook from video start',
+      confidence: 0.6,
+      tags: ['auto', 'hook'],
+    });
+  }
+
+  // Add CTA if needed and missing
+  if (config.includeCTA && !filtered.some(h => h.type === 'cta')) {
+    filtered.push({
+      id: `hl_cta_${Date.now()}`,
+      startTime: Math.max(0, (filtered[filtered.length - 1]?.endTime || totalDuration) - 5000),
+      endTime: filtered[filtered.length - 1]?.endTime || totalDuration,
+      label: 'Call to Action',
+      type: 'cta',
+      reason: 'Auto-generated CTA from video end',
+      confidence: 0.5,
+      tags: ['auto', 'cta'],
+    });
+  }
+
+  return filtered;
+}
+
+// ============================================================================
+// HEURISTIC FALLBACK
+// ============================================================================
+
+function generateHeuristicHighlights(transcription: TranscriptionResult, config: HighlightConfig): HighlightClip[] {
+  const highlights: HighlightClip[] = [];
+  const segments = transcription.segments;
+  const duration = transcription.duration;
+
+  if (segments.length === 0) {
+    // No segments, create basic highlights
+    const clipDuration = (config.targetDuration * 1000) / config.maxClips;
+    for (let i = 0; i < config.maxClips; i++) {
+      highlights.push({
+        id: `hl_${i}_${Date.now()}`,
+        startTime: i * clipDuration,
+        endTime: (i + 1) * clipDuration,
+        label: `Clip ${i + 1}`,
+        type: i === 0 ? 'hook' : i === config.maxClips - 1 ? 'cta' : 'body',
+        reason: 'Auto-generated segment',
+        confidence: 0.4,
+        tags: ['auto'],
+      });
+    }
+    return highlights;
+  }
+
+  // Score segments by likely engagement
+  const scored = segments.map((seg, i) => {
+    let score = 0.5;
+    const text = seg.text.toLowerCase();
+
+    // Short sentences often make better clips
+    if (seg.text.split(/\s+/).length <= 8) score += 0.1;
+
+    // Questions are engaging
+    if (text.includes('?')) score += 0.15;
+
+    // Emotional words
+    const emotionalWords = ['amazing', 'incredible', 'love', 'hate', 'best', 'worst', 'never', 'always', 'wow', 'genial', 'increíble', 'amor', 'mejor', 'wahnsinn', 'unglaublich'];
+    if (emotionalWords.some(w => text.includes(w))) score += 0.2;
+
+    // First segment is often a hook
+    if (i === 0) score += 0.2;
+
+    // Last segment is often a CTA
+    if (i === segments.length - 1) score += 0.15;
+
+    return { segment: seg, score, index: i };
+  });
+
+  // Sort by score and take top clips
+  scored.sort((a, b) => b.score - a.score);
+  const topClips = scored.slice(0, config.maxClips);
+
+  // Convert to highlights
+  topClips.forEach((clip, i) => {
+    const seg = clip.segment;
+    let type = 'body';
+    if (clip.index === 0) type = 'hook';
+    else if (clip.index === segments.length - 1) type = 'cta';
+    else if (clip.score >= 0.8) type = 'emotional_peak';
+    else if (clip.score >= 0.7) type = 'key_insight';
+
+    highlights.push({
+      id: `hl_${i}_${Date.now()}`,
+      startTime: seg.startTime,
+      endTime: seg.endTime,
+      label: seg.text.slice(0, 50) + (seg.text.length > 50 ? '...' : ''),
+      type,
+      reason: `Confidence score: ${clip.score.toFixed(2)}`,
+      confidence: clip.score,
+      tags: [type, 'heuristic'],
+    });
+  });
+
+  // Sort by start time
+  highlights.sort((a, b) => a.startTime - b.startTime);
+
+  return highlights;
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+let totalDuration = 0;
+
+function formatMs(ms: number): string {
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
