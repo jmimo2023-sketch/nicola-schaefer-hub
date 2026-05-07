@@ -19,6 +19,7 @@ import {
   Settings,
   Menu,
   X,
+  BarChart3,
   Home,
   Square,
   Sparkles,
@@ -64,6 +65,7 @@ import { ShamanicTemplateEngine } from './panels/ShamanicTemplateEngine';
 import { VideoEditingPanel } from './panels/VideoEditingPanel';
 import { VideoStudioPanel } from './panels/VideoStudioPanel';
 import { CalendarPublishingPanel } from './panels/CalendarPublishingPanel';
+import { StrategyInsightsPanel } from './panels/StrategyInsightsPanel';
 import { NavItem, BottomNavItem } from './components/SharedComponents';
 
 export default function App() {
@@ -202,6 +204,7 @@ function MainApp() {
                 <NavItem active={activeTab === 'shamanic'} onClick={() => { setActiveTab('shamanic'); setMobileMenuOpen(false); }} icon={<Sparkles size={18} />} label="Chamánico" badge="🔮" />
                 <div className="nav-section-title">{t('navAnalytics')}</div>
                 <NavItem active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} icon={<TrendingUp size={18} />} label={t('navInstagram')} />
+                <NavItem active={activeTab === 'analytics'} onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }} icon={<BarChart3 size={18} />} label="Analytics" badge="NEW" />
                 <div className="nav-section-title">{t('navStrategy')}</div>
                 <NavItem active={activeTab === 'simulator'} onClick={() => { setActiveTab('simulator'); setMobileMenuOpen(false); }} icon={<TrendingUp size={18} />} label={t('navSimulator')} />
                 <NavItem active={activeTab === 'methodology'} onClick={() => { setActiveTab('methodology'); setMobileMenuOpen(false); }} icon={<LayoutGrid size={18} />} label={t('navMethodology')} />
@@ -281,6 +284,7 @@ function MainApp() {
               >
                 {activeTab === 'home' && <ErrorBoundary><HomePanel onNavigate={setActiveTab} /></ErrorBoundary>}
                 {activeTab === 'dashboard' && <ErrorBoundary><DashboardPanel /></ErrorBoundary>}
+      {activeTab === 'analytics' && <ErrorBoundary><StrategyInsightsPanel /></ErrorBoundary>}
                 {activeTab === 'design' && <ErrorBoundary><DesignStudioPanel /></ErrorBoundary>}
                 {activeTab === 'ai-studio' && <ErrorBoundary><AIStudioPanel /></ErrorBoundary>}
                 {activeTab === 'studio' && <ErrorBoundary><UnifiedContentStudio /></ErrorBoundary>}
