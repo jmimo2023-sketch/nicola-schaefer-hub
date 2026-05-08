@@ -12,8 +12,6 @@ import {
   Globe,
   Moon,
   Sun,
-  LayoutGrid,
-  Zap,
   Palette,
   Image as ImageIcon,
   Settings,
@@ -21,9 +19,14 @@ import {
   X,
   BarChart3,
   Home,
-  Square,
   Sparkles,
-  Film
+  Film,
+  ChevronDown,
+  ChevronRight,
+  MoreHorizontal,
+  PlusCircle,
+  Brain,
+  Wand2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
@@ -41,32 +44,55 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { initGoogleLibraries } from './services/googleAssetsService';
-import { StudioPanel } from './panels/StudioPanel';
-import { ImageEditorPanel } from './panels/ImageEditorPanel';
 import { ConnectionsPanel } from './panels/ConnectionsPanel';
 import { CalendarPanel } from './panels/CalendarPanel';
-import { ScriptsPanel } from './panels/ScriptsPanel';
-import { StoriesPanel } from './panels/StoriesPanel';
 import { HomePanel } from './panels/HomePanel';
 import { GeneratorPanel } from './panels/GeneratorPanel';
 import { DesignStudioPanel } from './panels/DesignStudioPanel';
 import { AIStudioPanel } from './panels/AIStudioPanel';
-import { UnifiedContentStudio } from './panels/UnifiedContentStudio';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DashboardPanel } from './panels/DashboardPanel';
-import { SimulatorPanel } from './panels/SimulatorPanel';
-import { ClientPanel } from './panels/ClientPanel';
-import { MethodologyPanel } from './panels/MethodologyPanel';
-import { DACHPanel } from './panels/DACHPanel';
-import { MaterializationPanel } from './panels/MaterializationPanel';
 import { BackgroundGenerator } from './panels/BackgroundGenerator';
 import { ShamanicTemplateEngine } from './panels/ShamanicTemplateEngine';
-import { VideoEditingPanel } from './panels/VideoEditingPanel';
 import { VideoStudioPanel } from './panels/VideoStudioPanel';
-import { CalendarPublishingPanel } from './panels/CalendarPublishingPanel';
 import { StrategyInsightsPanel } from './panels/StrategyInsightsPanel';
 import { NavItem, BottomNavItem } from './components/SharedComponents';
+
+// ─── Section / Sub-tab type definitions ───────────────────────────────────────
+
+type Section = 'home' | 'create' | 'plan' | 'insights' | 'ai-lab' | 'settings';
+
+interface SubTabDef {
+  id: string;
+  label: string;
+  badge?: string;
+}
+
+const SECTION_SUBTABS: Record<string, SubTabDef[]> = {
+  create: [
+    { id: 'generator', label: 'Generator', badge: 'AI' },
+    { id: 'design', label: 'Design Studio', badge: 'NEW' },
+    { id: 'video', label: 'Video Studio', badge: 'PRO' },
+  ],
+  insights: [
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'strategy', label: 'Strategy' },
+    { id: 'dach', label: 'DACH' },
+  ],
+  'ai-lab': [
+    { id: 'ai-studio', label: 'AI Studio', badge: 'NEW' },
+    { id: 'generator-bg', label: 'Background Gen', badge: 'NEW' },
+    { id: 'shamanic', label: 'Shamanic', badge: '🔮' },
+  ],
+};
+
+// Panels that render fullscreen (no padding/margin)
+const FULLSCREEN_PANELS = new Set([
+  'design', 'ai-studio', 'generator-bg', 'shamanic', 'video',
+]);
+
+// ─── App Root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
   const { user, loading } = useFirebase();
@@ -82,15 +108,42 @@ export default function App() {
   return <MainApp />;
 }
 
+// ─── MainApp ──────────────────────────────────────────────────────────────────
+
 function MainApp() {
-  const [activeTab, setActiveTab] = useState('home');
+  // ── Navigation state ──
+  const [activeSection, setActiveSection] = useState<Section>('home');
+  const [createTab, setCreateTab] = useState('generator');
+  const [insightsTab, setInsightsTab] = useState('analytics');
+  const [aiLabTab, setAiLabTab] = useState('ai-studio');
+
+  // ── UI state ──
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [scheduledPosts, setScheduledPosts] = useState<{ id: string, date: string, type: string, content: string, status: string }[]>([]);
+  const [scheduledPosts, setScheduledPosts] = useState<{ id: string; date: string; type: string; content: string; status: string }[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState<Record<string, boolean>>({
+    create: true,
+    insights: true,
+    'ai-lab': true,
+  });
+
   const { lang, setLang, t } = useTranslation();
   const { user } = useFirebase();
 
+  // ── Derived: active sub-tab per section ──
+  const sectionSubTabMap: Record<Section, string> = useMemo(() => ({
+    home: 'home',
+    create: createTab,
+    plan: 'calendar',
+    insights: insightsTab,
+    'ai-lab': aiLabTab,
+    settings: 'connections',
+  }), [createTab, insightsTab, aiLabTab]);
+
+  const activeSubTab = sectionSubTabMap[activeSection];
+
+  // ── Google / Firestore init ──
   useEffect(() => {
     initGoogleLibraries().catch(err => console.error('Failed to init Google libs:', err));
   }, []);
@@ -114,11 +167,130 @@ function MainApp() {
     return () => unsubscribe();
   }, [user]);
 
+  // ── Theme toggle ──
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
   };
+
+  // ── Navigation helpers ──
+  const navigateToSection = (section: Section) => {
+    setActiveSection(section);
+  };
+
+  const navigateToSubTab = (section: Section, subTabId: string) => {
+    // Update the section's active sub-tab
+    if (section === 'create') setCreateTab(subTabId);
+    else if (section === 'insights') setInsightsTab(subTabId);
+    else if (section === 'ai-lab') setAiLabTab(subTabId);
+
+    // Also switch to that section if not already there
+    if (activeSection !== section) {
+      setActiveSection(section);
+    }
+  };
+
+  const toggleSidebarSection = (section: string) => {
+    setSidebarExpanded(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  // ── Render active panel ──
+  const renderPanel = () => {
+    switch (activeSection) {
+      case 'home':
+        return <ErrorBoundary><HomePanel onNavigate={(tab: string) => {
+          // Map old tab IDs to new nav structure
+          if (['generator', 'design', 'video'].includes(tab)) { navigateToSubTab('create', tab); }
+          else if (['analytics', 'strategy', 'dach'].includes(tab)) { navigateToSubTab('insights', tab); }
+          else if (['ai-studio', 'generator-bg', 'shamanic'].includes(tab)) { navigateToSubTab('ai-lab', tab); }
+          else if (tab === 'calendar') { navigateToSection('plan'); }
+          else if (tab === 'connections') { navigateToSection('settings'); }
+        }} /></ErrorBoundary>;
+
+      case 'create':
+        switch (createTab) {
+          case 'generator':
+            return <ErrorBoundary><GeneratorPanel onNavigate={(tab: string) => navigateToSubTab('create', tab)} /></ErrorBoundary>;
+          case 'design':
+            return <ErrorBoundary><DesignStudioPanel /></ErrorBoundary>;
+          case 'video':
+            return <ErrorBoundary><VideoStudioPanel /></ErrorBoundary>;
+          default:
+            return <ErrorBoundary><GeneratorPanel onNavigate={(tab: string) => navigateToSubTab('create', tab)} /></ErrorBoundary>;
+        }
+
+      case 'plan':
+        return <ErrorBoundary><CalendarPanel /></ErrorBoundary>;
+
+      case 'insights':
+        switch (insightsTab) {
+          case 'analytics':
+            return <ErrorBoundary><DashboardPanel /></ErrorBoundary>;
+          case 'strategy':
+            return <ErrorBoundary><StrategyInsightsPanel /></ErrorBoundary>;
+          case 'dach':
+            return <ErrorBoundary><StrategyInsightsPanel /></ErrorBoundary>;
+          default:
+            return <ErrorBoundary><DashboardPanel /></ErrorBoundary>;
+        }
+
+      case 'ai-lab':
+        switch (aiLabTab) {
+          case 'ai-studio':
+            return <ErrorBoundary><AIStudioPanel /></ErrorBoundary>;
+          case 'generator-bg':
+            return <ErrorBoundary><BackgroundGenerator /></ErrorBoundary>;
+          case 'shamanic':
+            return <ErrorBoundary><ShamanicTemplateEngine /></ErrorBoundary>;
+          default:
+            return <ErrorBoundary><AIStudioPanel /></ErrorBoundary>;
+        }
+
+      case 'settings':
+        return <ErrorBoundary><ConnectionsPanel /></ErrorBoundary>;
+
+      default:
+        return <ErrorBoundary><HomePanel onNavigate={() => {}} /></ErrorBoundary>;
+    }
+  };
+
+  // ── Sub-tab bar for sections with sub-tabs ──
+  const renderSubTabBar = () => {
+    const subTabs = SECTION_SUBTABS[activeSection];
+    if (!subTabs) return null;
+
+    const currentTabId = sectionSubTabMap[activeSection];
+
+    return (
+      <div className="flex items-center gap-1 bg-paper border border-brd rounded-2xl p-1.5 mb-4 overflow-x-auto">
+        {subTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => navigateToSubTab(activeSection, tab.id)}
+            className={cn(
+              "px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5",
+              currentTabId === tab.id
+                ? "bg-accent text-white shadow-lg shadow-accent/20"
+                : "text-ink-muted hover:text-ink hover:bg-brd/50"
+            )}
+          >
+            {tab.label}
+            {tab.badge && (
+              <span className={cn(
+                "text-[8px] font-bold px-1.5 py-0.5 rounded-full",
+                currentTabId === tab.id ? "bg-white/20 text-white" : "bg-accent/10 text-accent"
+              )}>
+                {tab.badge}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const isFullscreen = FULLSCREEN_PANELS.has(activeSubTab);
 
   return (
     <>
@@ -130,15 +302,27 @@ function MainApp() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="flex flex-col md:flex-row min-h-screen bg-paper text-ink overflow-hidden"
       >
-        {/* Sidebar - Desktop */}
+        {/* ── Sidebar - Desktop ─────────────────────────────────────────── */}
         <aside className={cn(
           "bg-card border border-brd flex-col z-20 m-2 md:m-4 rounded-2xl lg:rounded-3xl shadow-custom",
-          activeTab === 'editor' || activeTab === 'design' || activeTab === 'ai-studio' || activeTab === 'studio' || activeTab === 'generator-bg' || activeTab === 'shamanic' ? "hidden" : "hidden md:flex w-full md:w-64 lg:w-72"
+          isFullscreen ? "hidden" : "hidden md:flex w-full md:w-64 lg:w-72"
         )}>
-          <SidebarContent activeTab={activeTab} setActiveTab={setActiveTab} user={user} theme={theme} toggleTheme={toggleTheme} lang={lang} setLang={setLang} />
+          <SidebarContent
+            activeSection={activeSection}
+            activeSubTab={activeSubTab}
+            navigateToSection={navigateToSection}
+            navigateToSubTab={navigateToSubTab}
+            sidebarExpanded={sidebarExpanded}
+            toggleSidebarSection={toggleSidebarSection}
+            user={user}
+            theme={theme}
+            toggleTheme={toggleTheme}
+            lang={lang}
+            setLang={setLang}
+          />
         </aside>
 
-        {/* Mobile Header */}
+        {/* ── Mobile Header ─────────────────────────────────────────────── */}
         <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b border-brd z-30 flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-accent rounded-xl flex items-center justify-center font-bold text-sm text-white">N</div>
@@ -160,7 +344,7 @@ function MainApp() {
           </div>
         </header>
 
-        {/* Mobile Menu Overlay */}
+        {/* ── Mobile Menu Overlay ───────────────────────────────────────── */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
@@ -173,7 +357,7 @@ function MainApp() {
           )}
         </AnimatePresence>
 
-        {/* Mobile Menu */}
+        {/* ── Mobile Menu (Slide-in) ────────────────────────────────────── */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.aside
@@ -190,28 +374,103 @@ function MainApp() {
                 </button>
               </div>
               <nav className="p-3 space-y-1">
-                <NavItem active={activeTab === 'home'} onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} icon={<Home size={18} />} label={t('navHome')} />
-                <div className="nav-section-title">{t('navContent')}</div>
-                <NavItem active={activeTab === 'design'} onClick={() => { setActiveTab('design'); setMobileMenuOpen(false); }} icon={<Palette size={18} />} label={t('navStudio')} badge="NEW" />
+                {/* Home */}
+                <NavItem
+                  active={activeSection === 'home'}
+                  onClick={() => { navigateToSection('home'); setMobileMenuOpen(false); }}
+                  icon={<Home size={18} />}
+                  label={t('navHome')}
+                />
 
-                <NavItem active={activeTab === 'editor'} onClick={() => { setActiveTab('editor'); setMobileMenuOpen(false); }} icon={<Square size={18} />} label="Image Editor" />
-                <NavItem active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setMobileMenuOpen(false); }} icon={<Calendar size={18} />} label={t('navCalendar')} />
-                <NavItem active={activeTab === 'generator'} onClick={() => { setActiveTab('generator'); setMobileMenuOpen(false); }} icon={<PenTool size={18} />} label={t('navGenerator')} badge="AI" />
-                <NavItem active={activeTab === 'ai-studio'} onClick={() => { setActiveTab('ai-studio'); setMobileMenuOpen(false); }} icon={<Sparkles size={18} />} label="AI Studio" badge="NEW" />
-                <NavItem active={activeTab === 'studio'} onClick={() => { setActiveTab('studio'); setMobileMenuOpen(false); }} icon={<Film size={18} />} label="Content Studio" badge="PRO" />
-                <NavItem active={activeTab === 'video-edit'} onClick={() => { setActiveTab('video-edit'); setMobileMenuOpen(false); }} icon={<Film size={18} />} label="Video Edit" badge="NEW" />
-                <NavItem active={activeTab === 'generator-bg' || activeTab === 'shamanic'} onClick={() => { setActiveTab('generator-bg'); setMobileMenuOpen(false); }} icon={<Palette size={18} />} label="BG Generator" badge="NEW" />
-                <NavItem active={activeTab === 'shamanic'} onClick={() => { setActiveTab('shamanic'); setMobileMenuOpen(false); }} icon={<Sparkles size={18} />} label="Chamánico" badge="🔮" />
-                <div className="nav-section-title">{t('navAnalytics')}</div>
-                <NavItem active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} icon={<TrendingUp size={18} />} label={t('navInstagram')} />
-                <NavItem active={activeTab === 'analytics'} onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }} icon={<BarChart3 size={18} />} label="Analytics" badge="NEW" />
-                <div className="nav-section-title">{t('navStrategy')}</div>
-                <NavItem active={activeTab === 'simulator'} onClick={() => { setActiveTab('simulator'); setMobileMenuOpen(false); }} icon={<TrendingUp size={18} />} label={t('navSimulator')} />
-                <NavItem active={activeTab === 'methodology'} onClick={() => { setActiveTab('methodology'); setMobileMenuOpen(false); }} icon={<LayoutGrid size={18} />} label={t('navMethodology')} />
-                <NavItem active={activeTab === 'dach'} onClick={() => { setActiveTab('dach'); setMobileMenuOpen(false); }} icon={<Globe size={18} />} label={t('navDACH')} />
-                <div className="nav-section-title">{t('navSettings')}</div>
-                <NavItem active={activeTab === 'connections'} onClick={() => { setActiveTab('connections'); setMobileMenuOpen(false); }} icon={<Settings size={18} />} label={t('navConnections')} />
+                {/* Create */}
+                <div className="nav-section-title">CREATE</div>
+                <NavItem
+                  active={activeSection === 'create' && createTab === 'generator'}
+                  onClick={() => { navigateToSubTab('create', 'generator'); setMobileMenuOpen(false); }}
+                  icon={<PenTool size={18} />}
+                  label="Generator"
+                  badge="AI"
+                />
+                <NavItem
+                  active={activeSection === 'create' && createTab === 'design'}
+                  onClick={() => { navigateToSubTab('create', 'design'); setMobileMenuOpen(false); }}
+                  icon={<Palette size={18} />}
+                  label="Design Studio"
+                  badge="NEW"
+                />
+                <NavItem
+                  active={activeSection === 'create' && createTab === 'video'}
+                  onClick={() => { navigateToSubTab('create', 'video'); setMobileMenuOpen(false); }}
+                  icon={<Film size={18} />}
+                  label="Video Studio"
+                  badge="PRO"
+                />
+
+                {/* Plan */}
+                <div className="nav-section-title">PLAN</div>
+                <NavItem
+                  active={activeSection === 'plan'}
+                  onClick={() => { navigateToSection('plan'); setMobileMenuOpen(false); }}
+                  icon={<Calendar size={18} />}
+                  label={t('navCalendar')}
+                />
+
+                {/* Insights */}
+                <div className="nav-section-title">INSIGHTS</div>
+                <NavItem
+                  active={activeSection === 'insights' && insightsTab === 'analytics'}
+                  onClick={() => { navigateToSubTab('insights', 'analytics'); setMobileMenuOpen(false); }}
+                  icon={<BarChart3 size={18} />}
+                  label="Analytics"
+                />
+                <NavItem
+                  active={activeSection === 'insights' && insightsTab === 'strategy'}
+                  onClick={() => { navigateToSubTab('insights', 'strategy'); setMobileMenuOpen(false); }}
+                  icon={<TrendingUp size={18} />}
+                  label="Strategy"
+                />
+                <NavItem
+                  active={activeSection === 'insights' && insightsTab === 'dach'}
+                  onClick={() => { navigateToSubTab('insights', 'dach'); setMobileMenuOpen(false); }}
+                  icon={<Globe size={18} />}
+                  label="DACH"
+                />
+
+                {/* AI Lab */}
+                <div className="nav-section-title">AI LAB</div>
+                <NavItem
+                  active={activeSection === 'ai-lab' && aiLabTab === 'ai-studio'}
+                  onClick={() => { navigateToSubTab('ai-lab', 'ai-studio'); setMobileMenuOpen(false); }}
+                  icon={<Sparkles size={18} />}
+                  label="AI Studio"
+                  badge="NEW"
+                />
+                <NavItem
+                  active={activeSection === 'ai-lab' && aiLabTab === 'generator-bg'}
+                  onClick={() => { navigateToSubTab('ai-lab', 'generator-bg'); setMobileMenuOpen(false); }}
+                  icon={<Palette size={18} />}
+                  label="Background Gen"
+                  badge="NEW"
+                />
+                <NavItem
+                  active={activeSection === 'ai-lab' && aiLabTab === 'shamanic'}
+                  onClick={() => { navigateToSubTab('ai-lab', 'shamanic'); setMobileMenuOpen(false); }}
+                  icon={<Sparkles size={18} />}
+                  label="Shamanic"
+                  badge="🔮"
+                />
+
+                {/* Settings */}
+                <div className="nav-section-title">{t('navSettings').toUpperCase()}</div>
+                <NavItem
+                  active={activeSection === 'settings'}
+                  onClick={() => { navigateToSection('settings'); setMobileMenuOpen(false); }}
+                  icon={<Settings size={18} />}
+                  label={t('navConnections')}
+                />
               </nav>
+
+              {/* Mobile menu user card */}
               <div className="p-4 border-t border-brd">
                 <div className="flex items-center gap-3 p-3 bg-paper border border-brd rounded-xl">
                   <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-xs">NS</div>
@@ -227,32 +486,62 @@ function MainApp() {
           )}
         </AnimatePresence>
 
-        {/* Bottom Navigation - Mobile */}
+        {/* ── Bottom Navigation - Mobile ────────────────────────────────── */}
         <nav className={cn(
           "md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-brd z-30 flex items-center justify-around px-2 pb-safe",
-          activeTab === 'editor' || activeTab === 'design' || activeTab === 'ai-studio' || activeTab === 'generator-bg' || activeTab === 'shamanic' ? "hidden" : ""
+          isFullscreen ? "hidden" : ""
         )}>
-          <BottomNavItem active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon={<Home size={20} />} label="Home" />
-          <BottomNavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<Calendar size={20} />} label="Calendar" />
-
-          <BottomNavItem active={activeTab === 'generator'} onClick={() => setActiveTab('generator')} icon={<PenTool size={20} />} label="AI" />
-          <BottomNavItem active={activeTab === 'ai-studio'} onClick={() => setActiveTab('ai-studio')} icon={<Sparkles size={20} />} label="Studio" />
-          <BottomNavItem active={activeTab === 'studio'} onClick={() => setActiveTab('studio')} icon={<Film size={20} />} label="Content" />
-          <BottomNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<TrendingUp size={20} />} label="Stats" />
+          <BottomNavItem
+            active={activeSection === 'home'}
+            onClick={() => navigateToSection('home')}
+            icon={<Home size={20} />}
+            label="Home"
+          />
+          <BottomNavItem
+            active={activeSection === 'create'}
+            onClick={() => navigateToSection('create')}
+            icon={<PlusCircle size={20} />}
+            label="Create"
+          />
+          <BottomNavItem
+            active={activeSection === 'plan'}
+            onClick={() => navigateToSection('plan')}
+            icon={<Calendar size={20} />}
+            label="Calendar"
+          />
+          <BottomNavItem
+            active={activeSection === 'insights'}
+            onClick={() => navigateToSection('insights')}
+            icon={<BarChart3 size={20} />}
+            label="Insights"
+          />
+          <BottomNavItem
+            active={activeSection === 'ai-lab' || activeSection === 'settings'}
+            onClick={() => navigateToSection('ai-lab')}
+            icon={<MoreHorizontal size={20} />}
+            label="More"
+          />
         </nav>
 
-        {/* Main Content Area */}
+        {/* ── Main Content Area ──────────────────────────────────────────── */}
         <main className={cn(
           "flex-1 flex flex-col overflow-hidden",
-          activeTab === 'editor' || activeTab === 'design' || activeTab === 'ai-studio' || activeTab === 'studio' || activeTab === 'generator-bg' || activeTab === 'shamanic' ? "m-0 p-0" : "m-2 md:m-4 ml-0 md:ml-0 pt-14 md:pt-0 pb-20 md:pb-0"
+          isFullscreen ? "m-0 p-0" : "m-2 md:m-4 ml-0 md:ml-0 pt-14 md:pt-0 pb-20 md:pb-0"
         )}>
           {/* Desktop Top bar */}
           <header className={cn(
             "hidden md:flex h-14 lg:h-16 items-center justify-between px-4 lg:px-8 bg-card border border-brd rounded-2xl lg:rounded-3xl mb-3 lg:mb-4 shadow-custom",
-            activeTab === 'editor' || activeTab === 'design' || activeTab === 'ai-studio' || activeTab === 'studio' || activeTab === 'generator-bg' || activeTab === 'shamanic' ? "hidden" : ""
+            isFullscreen ? "hidden" : ""
           )}>
             <div className="flex items-center gap-4">
-              <h2 className="text-xs lg:text-sm font-bold uppercase tracking-widest text-ink-muted font-mono opacity-80">{t(activeTab).toUpperCase()}</h2>
+              <h2 className="text-xs lg:text-sm font-bold uppercase tracking-widest text-ink-muted font-mono opacity-80">
+                {activeSection === 'home' && t('navHome').toUpperCase()}
+                {activeSection === 'create' && 'CREATE'}
+                {activeSection === 'plan' && t('navCalendar').toUpperCase()}
+                {activeSection === 'insights' && 'INSIGHTS'}
+                {activeSection === 'ai-lab' && 'AI LAB'}
+                {activeSection === 'settings' && t('navConnections').toUpperCase()}
+              </h2>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex bg-paper border border-brd rounded-full overflow-hidden p-1">
@@ -271,42 +560,28 @@ function MainApp() {
           {/* Panel Container */}
           <div className={cn(
             "flex-1 overflow-y-auto",
-            activeTab === 'editor' || activeTab === 'design' || activeTab === 'ai-studio' || activeTab === 'studio' || activeTab === 'generator-bg' || activeTab === 'shamanic' ? "p-0" : "p-3 md:p-6 lg:p-8 xl:p-10"
+            isFullscreen ? "p-0" : "p-3 md:p-6 lg:p-8 xl:p-10"
           )}>
+            {/* Sub-tab bar for sections with multiple tabs */}
+            {!isFullscreen && renderSubTabBar()}
+
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeTab}
+                key={`${activeSection}-${activeSubTab}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
                 className="w-full max-w-7xl mx-auto"
               >
-                {activeTab === 'home' && <ErrorBoundary><HomePanel onNavigate={setActiveTab} /></ErrorBoundary>}
-                {activeTab === 'dashboard' && <ErrorBoundary><DashboardPanel /></ErrorBoundary>}
-      {activeTab === 'analytics' && <ErrorBoundary><StrategyInsightsPanel /></ErrorBoundary>}
-                {activeTab === 'design' && <ErrorBoundary><DesignStudioPanel /></ErrorBoundary>}
-                {activeTab === 'ai-studio' && <ErrorBoundary><AIStudioPanel /></ErrorBoundary>}
-                {activeTab === 'studio' && <ErrorBoundary><UnifiedContentStudio /></ErrorBoundary>}
-                {activeTab === 'editor' && <ErrorBoundary><ImageEditorPanel /></ErrorBoundary>}
-                {activeTab === 'calendar' && <ErrorBoundary><CalendarPublishingPanel /></ErrorBoundary>}
-                {activeTab === 'generator' && <ErrorBoundary><GeneratorPanel onNavigate={setActiveTab} /></ErrorBoundary>}
-                {activeTab === 'scripts' && <ErrorBoundary><ScriptsPanel /></ErrorBoundary>}
-                {activeTab === 'stories' && <ErrorBoundary><StoriesPanel /></ErrorBoundary>}
-                {activeTab === 'video-edit' && <ErrorBoundary><VideoStudioPanel /></ErrorBoundary>}
-                {activeTab === 'simulator' && <ErrorBoundary><SimulatorPanel /></ErrorBoundary>}
-                {activeTab === 'client' && <ErrorBoundary><ClientPanel /></ErrorBoundary>}
-                {activeTab === 'methodology' && <ErrorBoundary><MethodologyPanel /></ErrorBoundary>}
-                {activeTab === 'dach' && <ErrorBoundary><DACHPanel /></ErrorBoundary>}
-                {activeTab === 'materialization' && <ErrorBoundary><MaterializationPanel /></ErrorBoundary>}
-                {activeTab === 'connections' && <ErrorBoundary><ConnectionsPanel /></ErrorBoundary>}
-                {activeTab === 'generator-bg' || activeTab === 'shamanic' && <ErrorBoundary><BackgroundGenerator /></ErrorBoundary>}
-                {activeTab === 'shamanic' && <ErrorBoundary><ShamanicTemplateEngine /></ErrorBoundary>}
+                {renderPanel()}
               </motion.div>
             </AnimatePresence>
           </div>
         </main>
       </motion.div>
+
+      {/* ── Onboarding ───────────────────────────────────────────────────── */}
       <AnimatePresence>
         {showOnboarding && (
           <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
@@ -316,11 +591,38 @@ function MainApp() {
   );
 }
 
-function SidebarContent({ activeTab, setActiveTab, user, theme, toggleTheme, lang, setLang }: any) {
+// ─── Sidebar Content (Desktop) ────────────────────────────────────────────────
+
+function SidebarContent({
+  activeSection,
+  activeSubTab,
+  navigateToSection,
+  navigateToSubTab,
+  sidebarExpanded,
+  toggleSidebarSection,
+  user,
+  theme,
+  toggleTheme,
+  lang,
+  setLang,
+}: {
+  activeSection: Section;
+  activeSubTab: string;
+  navigateToSection: (s: Section) => void;
+  navigateToSubTab: (s: Section, tab: string) => void;
+  sidebarExpanded: Record<string, boolean>;
+  toggleSidebarSection: (s: string) => void;
+  user: any;
+  theme: string;
+  toggleTheme: () => void;
+  lang: string;
+  setLang: (l: string) => void;
+}) {
   const { t } = useTranslation();
 
   return (
     <>
+      {/* Logo */}
       <div className="p-4 lg:p-6 flex items-center gap-4">
         <div className="w-10 h-10 lg:w-12 lg:h-12 bg-accent rounded-2xl flex items-center justify-center font-bold text-lg lg:text-xl text-white shadow-lg shadow-accent/20">N</div>
         <div>
@@ -330,31 +632,137 @@ function SidebarContent({ activeTab, setActiveTab, user, theme, toggleTheme, lan
       </div>
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-        <div className="nav-section-title">{t('navHome').toUpperCase()}</div>
-        <NavItem active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon={<LayoutDashboard size={18} />} label={t('navHome')} />
+        {/* ── Home ───────────────────── */}
+        <NavItem
+          active={activeSection === 'home'}
+          onClick={() => navigateToSection('home')}
+          icon={<Home size={18} />}
+          label={t('navHome')}
+        />
 
-        <div className="nav-section-title">{t('navContent')}</div>
-        <NavItem active={activeTab === 'design'} onClick={() => setActiveTab('design')} icon={<Palette size={18} />} label={t('navStudio')} badge="NEW" />
-        <NavItem active={activeTab === 'editor'} onClick={() => setActiveTab('editor')} icon={<Square size={18} />} label="Image Editor" />
-        <NavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<Calendar size={18} />} label={t('navCalendar')} />
-        <NavItem active={activeTab === 'generator'} onClick={() => setActiveTab('generator')} icon={<PenTool size={18} />} label={t('navGenerator')} badge="AI" />
-        <NavItem active={activeTab === 'ai-studio'} onClick={() => setActiveTab('ai-studio')} icon={<Sparkles size={18} />} label="AI Studio" badge="NEW" />
-        <NavItem active={activeTab === 'video-edit'} onClick={() => setActiveTab('video-edit')} icon={<Film size={18} />} label="Video Edit" badge="NEW" />
-        <NavItem active={activeTab === 'generator-bg' || activeTab === 'shamanic'} onClick={() => setActiveTab('generator-bg')} icon={<Palette size={18} />} label="BG Generator" badge="NEW" />
-        <NavItem active={activeTab === 'shamanic'} onClick={() => setActiveTab('shamanic')} icon={<Sparkles size={18} />} label="Chamánico" badge="🔮" />
+        {/* ── Create (collapsible) ───── */}
+        <SidebarSection
+          id="create"
+          icon={<PlusCircle size={18} />}
+          label="Create"
+          active={activeSection === 'create'}
+          expanded={sidebarExpanded['create'] ?? true}
+          onToggleExpand={() => toggleSidebarSection('create')}
+          onClickHeader={() => navigateToSection('create')}
+        >
+          <NavItem
+            active={activeSection === 'create' && activeSubTab === 'generator'}
+            onClick={() => navigateToSubTab('create', 'generator')}
+            icon={<PenTool size={16} />}
+            label="Generator"
+            badge="AI"
+            indent
+          />
+          <NavItem
+            active={activeSection === 'create' && activeSubTab === 'design'}
+            onClick={() => navigateToSubTab('create', 'design')}
+            icon={<Palette size={16} />}
+            label="Design Studio"
+            badge="NEW"
+            indent
+          />
+          <NavItem
+            active={activeSection === 'create' && activeSubTab === 'video'}
+            onClick={() => navigateToSubTab('create', 'video')}
+            icon={<Film size={16} />}
+            label="Video Studio"
+            badge="PRO"
+            indent
+          />
+        </SidebarSection>
 
-        <div className="nav-section-title">{t('navAnalytics')}</div>
-        <NavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<TrendingUp size={18} />} label={t('navInstagram')} />
+        {/* ── Plan ────────────────────── */}
+        <NavItem
+          active={activeSection === 'plan'}
+          onClick={() => navigateToSection('plan')}
+          icon={<Calendar size={18} />}
+          label={t('navCalendar')}
+        />
 
-        <div className="nav-section-title">{t('navStrategy')}</div>
-        <NavItem active={activeTab === 'simulator'} onClick={() => setActiveTab('simulator')} icon={<TrendingUp size={18} />} label={t('navSimulator')} />
-        <NavItem active={activeTab === 'methodology'} onClick={() => setActiveTab('methodology')} icon={<LayoutGrid size={18} />} label={t('navMethodology')} />
-        <NavItem active={activeTab === 'dach'} onClick={() => setActiveTab('dach')} icon={<Globe size={18} />} label={t('navDACH')} />
+        {/* ── Insights (collapsible) ─── */}
+        <SidebarSection
+          id="insights"
+          icon={<BarChart3 size={18} />}
+          label="Insights"
+          active={activeSection === 'insights'}
+          expanded={sidebarExpanded['insights'] ?? true}
+          onToggleExpand={() => toggleSidebarSection('insights')}
+          onClickHeader={() => navigateToSection('insights')}
+        >
+          <NavItem
+            active={activeSection === 'insights' && activeSubTab === 'analytics'}
+            onClick={() => navigateToSubTab('insights', 'analytics')}
+            icon={<BarChart3 size={16} />}
+            label="Analytics"
+            indent
+          />
+          <NavItem
+            active={activeSection === 'insights' && activeSubTab === 'strategy'}
+            onClick={() => navigateToSubTab('insights', 'strategy')}
+            icon={<TrendingUp size={16} />}
+            label="Strategy"
+            indent
+          />
+          <NavItem
+            active={activeSection === 'insights' && activeSubTab === 'dach'}
+            onClick={() => navigateToSubTab('insights', 'dach')}
+            icon={<Globe size={16} />}
+            label="DACH"
+            indent
+          />
+        </SidebarSection>
 
-        <div className="nav-section-title">{t('navSettings')}</div>
-        <NavItem active={activeTab === 'connections'} onClick={() => setActiveTab('connections')} icon={<Settings size={18} />} label={t('navConnections')} />
+        {/* ── AI Lab (collapsible) ────── */}
+        <SidebarSection
+          id="ai-lab"
+          icon={<Brain size={18} />}
+          label="AI Lab"
+          active={activeSection === 'ai-lab'}
+          expanded={sidebarExpanded['ai-lab'] ?? true}
+          onToggleExpand={() => toggleSidebarSection('ai-lab')}
+          onClickHeader={() => navigateToSection('ai-lab')}
+        >
+          <NavItem
+            active={activeSection === 'ai-lab' && activeSubTab === 'ai-studio'}
+            onClick={() => navigateToSubTab('ai-lab', 'ai-studio')}
+            icon={<Sparkles size={16} />}
+            label="AI Studio"
+            badge="NEW"
+            indent
+          />
+          <NavItem
+            active={activeSection === 'ai-lab' && activeSubTab === 'generator-bg'}
+            onClick={() => navigateToSubTab('ai-lab', 'generator-bg')}
+            icon={<Wand2 size={16} />}
+            label="Background Gen"
+            badge="NEW"
+            indent
+          />
+          <NavItem
+            active={activeSection === 'ai-lab' && activeSubTab === 'shamanic'}
+            onClick={() => navigateToSubTab('ai-lab', 'shamanic')}
+            icon={<Sparkles size={16} />}
+            label="Shamanic"
+            badge="🔮"
+            indent
+          />
+        </SidebarSection>
+
+        {/* ── Settings ─────────────────── */}
+        <NavItem
+          active={activeSection === 'settings'}
+          onClick={() => navigateToSection('settings')}
+          icon={<Settings size={18} />}
+          label={t('navConnections')}
+        />
       </nav>
 
+      {/* ── User card ────────────────── */}
       <div className="p-3 lg:p-4 bg-transparent mt-auto">
         <div className="flex items-center gap-3 p-3 bg-paper border border-brd rounded-xl lg:rounded-2xl">
           <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-xs">NS</div>
@@ -381,5 +789,63 @@ function SidebarContent({ activeTab, setActiveTab, user, theme, toggleTheme, lan
         </div>
       </div>
     </>
+  );
+}
+
+// ─── SidebarSection (collapsible group) ───────────────────────────────────────
+
+function SidebarSection({
+  id,
+  icon,
+  label,
+  active,
+  expanded,
+  onToggleExpand,
+  onClickHeader,
+  children,
+}: {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onClickHeader: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div
+        className={cn(
+          "flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all group",
+          active ? "bg-accent/10 text-accent" : "hover:bg-brd/50 text-ink-muted hover:text-ink"
+        )}
+        onClick={onClickHeader}
+      >
+        <span className="flex-shrink-0">{icon}</span>
+        <span className="flex-1 text-sm font-bold truncate">{label}</span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+          className="flex-shrink-0 p-0.5 rounded hover:bg-brd/50 transition-colors"
+        >
+          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </button>
+      </div>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-3 space-y-0.5">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

@@ -14,13 +14,17 @@
 import { toast } from 'sonner';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://djspyyyihyxwtmduoolj.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Pph0V6rjR2PR3oGe87gikA_qo-F__TU';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const BUCKET = 'nicola-assets';
 
 let supabase: ReturnType<typeof createClient> | null = null;
 
 function getSupabase() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase not configured for auto-save. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    return null;
+  }
   if (!supabase) {
     supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }

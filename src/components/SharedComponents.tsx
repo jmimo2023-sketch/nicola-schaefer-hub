@@ -1,12 +1,13 @@
 import React from 'react';
 import { cn } from '../lib/utils';
 
-export function NavItem({ active, onClick, icon, label, badge }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; badge?: string }) {
+export function NavItem({ active, onClick, icon, label, badge, indent }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; badge?: string; indent?: boolean }) {
   return (
     <button
       onClick={onClick}
       className={cn(
         "w-full flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-xl transition-all duration-300 text-sm font-medium",
+        indent && "pl-8",
         active
           ? "bg-accent text-white shadow-lg shadow-accent/40"
           : "text-ink-muted hover:bg-brd hover:text-ink"
