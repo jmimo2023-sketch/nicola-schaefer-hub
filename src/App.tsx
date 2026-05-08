@@ -120,7 +120,16 @@ function MainApp() {
   const [aiLabTab, setAiLabTab] = useState('ai-studio');
 
   // ── UI state ──
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    // Initialize theme from localStorage or default to 'light'
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('nicola-theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      // Set initial theme on document
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    return 'light';
+  });
   const [scheduledPosts, setScheduledPosts] = useState<{ id: string; date: string; type: string; content: string; status: string }[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -144,6 +153,14 @@ function MainApp() {
   }), [createTab, insightsTab, aiLabTab]);
 
   const activeSubTab = sectionSubTabMap[activeSection];
+
+  // ── Theme initialization ──
+  useEffect(() => {
+    const saved = localStorage.getItem('nicola-theme');
+    const initial = saved || 'light';
+    document.documentElement.setAttribute('data-theme', initial);
+    if (saved && saved !== theme) setTheme(saved as 'light' | 'dark');
+  }, []);
 
   // ── Google / Firestore init ──
   useEffect(() => {
@@ -174,6 +191,7 @@ function MainApp() {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('nicola-theme', newTheme);
   };
 
   // ── Navigation helpers ──

@@ -49,18 +49,27 @@ export function HomePanel({ onNavigate }: HomePanelProps) {
   const [upcomingPosts, setUpcomingPosts] = useState<any[]>([]);
   const [workflowStats, setWorkflowStats] = useState<Record<ContentStatus, number> | null>(null);
 
-  // Subscribe to upcoming posts
+  // Subscribe to upcoming posts (only when authenticated)
   useEffect(() => {
-    const unsub = contentWorkflow.subscribe({ status: 'scheduled' }, (items) => {
-      setUpcomingPosts(items.slice(0, 5));
-    });
-    return unsub;
-  }, []);
+    if (!user) return;
+    try {
+      const unsub = contentWorkflow.subscribe({ status: 'scheduled' }, (items) => {
+        setUpcomingPosts(items.slice(0, 5));
+      });
+      return unsub;
+    } catch (err) {
+      console.warn('Failed to subscribe to scheduled posts:', err);
+      return () => {};
+    }
+  }, [user]);
 
-  // Get workflow stats
+  // Get workflow stats (only when authenticated)
   useEffect(() => {
-    contentWorkflow.getStats().then(setWorkflowStats).catch(console.error);
-  }, []);
+    if (!user) return;
+    contentWorkflow.getStats().then(setWorkflowStats).catch(err => {
+      console.warn('Failed to get workflow stats:', err);
+    });
+  }, [user]);
 
   const firstName = user?.displayName?.split(' ')[0] || 'Nicola';
 
