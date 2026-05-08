@@ -58,6 +58,7 @@ import { ShamanicTemplateEngine } from './panels/ShamanicTemplateEngine';
 import { VideoStudioPanel } from './panels/VideoStudioPanel';
 import { StrategyInsightsPanel } from './panels/StrategyInsightsPanel';
 import { NavItem, BottomNavItem } from './components/SharedComponents';
+import { AssetLibraryPanel } from './panels/AssetLibraryPanel';
 
 // ─── Section / Sub-tab type definitions ───────────────────────────────────────
 
@@ -74,6 +75,7 @@ const SECTION_SUBTABS: Record<string, SubTabDef[]> = {
     { id: 'generator', label: 'Generator', badge: 'AI' },
     { id: 'design', label: 'Design Studio', badge: 'NEW' },
     { id: 'video', label: 'Video Studio', badge: 'PRO' },
+    { id: 'assets', label: 'Assets', badge: 'NEW' },
   ],
   insights: [
     { id: 'analytics', label: 'Analytics' },
@@ -216,6 +218,8 @@ function MainApp() {
             return <ErrorBoundary><DesignStudioPanel /></ErrorBoundary>;
           case 'video':
             return <ErrorBoundary><VideoStudioPanel /></ErrorBoundary>;
+          case 'assets':
+            return <ErrorBoundary><AssetLibraryPanel /></ErrorBoundary>;
           default:
             return <ErrorBoundary><GeneratorPanel onNavigate={(tab: string) => navigateToSubTab('create', tab)} /></ErrorBoundary>;
         }
